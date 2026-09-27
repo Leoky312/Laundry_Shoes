@@ -1,0 +1,35 @@
+{
+  "name": "laundry-shoes-backend",
+  "version": "1.0.0",
+  "description": "Backend REST API for Laundry Shoes App using Express and Prisma ORM",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "prisma:seed": "node prisma/seed.js",
+    "prisma:studio": "prisma studio"
+  },
+  "keywords": [
+    "laundry-shoes",
+    "express",
+    "prisma",
+    "mysql"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  }
+}

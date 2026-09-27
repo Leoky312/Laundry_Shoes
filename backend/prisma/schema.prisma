@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// -------------------------------------------------------------
+// ENUMS
+// -------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+enum OrderStatus {
+  MENUNGGU     // Menunggu konfirmasi admin
+  DIPROSES     // Pesanan diterima & dijadwalkan
+  DICUCI       // Dalam proses pencucian
+  DRYING       // Proses pengeringan
+  FINISHING    // Quality check & packing
+  SELESAI      // Selesai & siap diambil / diantar
+  DIBATALKAN   // Dibatalkan
+}
+
+enum PaymentStatus {
+  MENUNGGU_PEMBAYARAN
+  SUDAH_DIBAYAR
+  GAGAL
+}
+
+enum GalleryType {
+  SEBELUM      // Foto sepatu sebelum dicuci (dari customer/admin)
+  PROSES       // Foto saat proses pengerjaan
+  SESUDAH      // Foto hasil akhir laundry sepatu
+}
+
+// -------------------------------------------------------------
+// MODELS
+// -------------------------------------------------------------
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(150)
+  password  String   @db.VarChar(255)
+  phone     String?  @db.VarChar(20)
+  address   String?  @db.Text
+  role      Role     @default(CUSTOMER)
+  avatar    String?  @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders    Order[]
+
+  @@map("users")
+}
+
+model Service {
+  id          Int         @id @default(autoincrement())
+  name        String      @db.VarChar(100)
+  description String      @db.Text
+  duration    String      @db.VarChar(50)   // Contoh: "2 - 3 Hari", "1 Hari"
+  price       Decimal     @db.Decimal(10, 2)
+  image       String?     @db.VarChar(255)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  orderItems  OrderItem[]
+
+  @@map("services")
+}
+
+model Order {
+  id           Int             @id @default(autoincrement())
+  orderNumber  String          @unique @db.VarChar(50) // Contoh: "ORD-20260926-001"
+  userId       Int
+  pickupDate   DateTime?
+  deliveryDate DateTime?
+  status       OrderStatus     @default(MENUNGGU)
+  totalAmount  Decimal         @db.Decimal(10, 2)
+  notes        String?         @db.Text
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItems   OrderItem[]
+  payment      Payment?
+  tracking     OrderTracking[]
+  galleries    Gallery[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id          Int      @id @default(autoincrement())
+  orderId     Int
+  serviceId   Int
+  shoeBrand   String   @db.VarChar(100) // Contoh: "Nike Air Jordan 1"
+  shoeColor   String?  @db.VarChar(50)  // Contoh: "White / Red"
+  shoeSize    String?  @db.VarChar(20)  // Contoh: "42"
+  notes       String?  @db.VarChar(255)
+  price       Decimal  @db.Decimal(10, 2)
+  quantity    Int      @default(1)
+
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@map("order_items")
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  orderId       Int           @unique
+  paymentMethod String        @db.VarChar(50) // Contoh: "TRANSFER_BANK", "QRIS", "CASH"
+  paymentStatus PaymentStatus @default(MENUNGGU_PEMBAYARAN)
+  amount        Decimal       @db.Decimal(10, 2)
+  paymentProof  String?       @db.VarChar(255) // URL/Nama file bukti transfer
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model OrderTracking {
+  id          Int         @id @default(autoincrement())
+  orderId     Int
+  status      OrderStatus
+  description String      @db.Text
+  updatedBy   String?     @default("Admin") @db.VarChar(100)
+  createdAt   DateTime    @default(now())
+
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_tracking")
+}
+
+model Gallery {
+  id        Int         @id @default(autoincrement())
+  orderId   Int
+  type      GalleryType @default(SEBELUM)
+  imageUrl  String      @db.VarChar(255)
+  caption   String?     @db.VarChar(255)
+  createdAt DateTime    @default(now())
+
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("galleries")
+}
