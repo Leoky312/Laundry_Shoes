@@ -117,6 +117,13 @@ mock.onGet(/\/orders(\?.*)?$/).reply(async (config) => {
   return [200, { data: orders }];
 });
 
+// GET /orders/my-orders
+mock.onGet(/\/orders\/my-orders(\?.*)?$/).reply(async (config) => {
+  // In a real app, we would filter by the logged in user's ID
+  const orders = await getDB('@db_orders');
+  return [200, { data: orders }];
+});
+
 // GET /orders/:id
 mock.onGet(/\/orders\/\d+/).reply(async (config) => {
   const id = parseInt(config.url.split('/').pop());
