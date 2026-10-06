@@ -1,115 +1,101 @@
-import {
-  Tabs,
-  TabList,
-  TabTrigger,
-  TabSlot,
-  TabTriggerSlotProps,
-  TabListProps,
-} from 'expo-router/ui';
-import { SymbolView } from 'expo-symbols';
-import { Pressable, useColorScheme, View, StyleSheet } from 'react-native';
-
-import { ExternalLink } from './external-link';
-import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
-
-import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native';
+import { useRouter, usePathname, Slot } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 
 export default function AppTabs() {
-  return (
-    <Tabs>
-      <TabSlot style={{ height: '100%' }} />
-      <TabList asChild>
-        <CustomTabList>
-          <TabTrigger name="home" href="/" asChild>
-            <TabButton>Home</TabButton>
-          </TabTrigger>
-          <TabTrigger name="explore" href="/explore" asChild>
-            <TabButton>Explore</TabButton>
-          </TabTrigger>
-        </CustomTabList>
-      </TabList>
-    </Tabs>
-  );
-}
-
-export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps) {
-  return (
-    <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView
-        type={isFocused ? 'backgroundSelected' : 'backgroundElement'}
-        style={styles.tabButtonView}>
-        <ThemedText type="small" themeColor={isFocused ? 'text' : 'textSecondary'}>
-          {children}
-        </ThemedText>
-      </ThemedView>
-    </Pressable>
-  );
-}
-
-export function CustomTabList(props: TabListProps) {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  
+  return (
+    <View style={styles.container}>
+      <View style={styles.content}>
+        <Slot />
+      </View>
+      <WebBottomTabs colors={colors} />
+    </View>
+  );
+}
+
+function WebBottomTabs({ colors }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { isAdmin } = useAuth();
+
+  const customerTabs = [
+    { name: 'index', label: 'Beranda', path: '/', icon: 'home' },
+    { name: 'history', label: 'Pesanan', path: '/history', icon: 'clipboard' },
+    { name: 'profile', label: 'Profil', path: '/profile', icon: 'person' },
+  ];
+
+  const adminTabs = [
+    { name: 'dashboard', label: 'Dashboard', path: '/(admin)/dashboard', icon: 'grid' },
+    { name: 'orders', label: 'Pesanan', path: '/(admin)/orders', icon: 'file-tray-full' },
+    { name: 'services', label: 'Layanan', path: '/(admin)/services', icon: 'sparkles' },
+    { name: 'report', label: 'Laporan', path: '/(admin)/report', icon: 'bar-chart' },
+    { name: 'profile', label: 'Profil', path: '/profile', icon: 'person' },
+  ];
+
+  const tabs = isAdmin ? adminTabs : customerTabs;
 
   return (
-    <View {...props} style={styles.tabListContainer}>
-      <ThemedView type="backgroundElement" style={styles.innerContainer}>
-        <ThemedText type="smallBold" style={styles.brandText}>
-          Expo Starter
-        </ThemedText>
-
-        {props.children}
-
-        <ExternalLink href="https://docs.expo.dev" asChild>
-          <Pressable style={styles.externalPressable}>
-            <ThemedText type="link">Docs</ThemedText>
-            <SymbolView
-              tintColor={colors.text}
-              name={{ ios: 'arrow.up.right.square', web: 'link' }}
-              size={12}
+    <View style={[styles.webTabBar, { backgroundColor: '#FFFFFF', borderTopColor: '#E5E7EB' }]}>
+      {tabs.map((tab) => {
+        // usePathname() strips out route groups like (admin), so we need to match accordingly
+        const strippedTabPath = tab.path.replace(/\/\([^)]+\)/g, '');
+        const isActive = pathname === strippedTabPath || (tab.path === '/' && pathname === '/index');
+        
+        return (
+          <TouchableOpacity
+            key={tab.name}
+            style={styles.webTabItem}
+            onPress={() => router.replace(tab.path)}
+          >
+            <Ionicons 
+              name={isActive ? tab.icon : `${tab.icon}-outline`} 
+              size={24} 
+              color={isActive ? '#236B38' : '#6B7280'} 
             />
-          </Pressable>
-        </ExternalLink>
-      </ThemedView>
+            <Text style={[styles.webTabLabel, { color: isActive ? '#236B38' : '#6B7280', fontWeight: isActive ? '700' : '500' }]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  tabListContainer: {
-    position: 'absolute',
-    width: '100%',
-    padding: Spacing.three,
+  container: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+  },
+  webTabBar: {
+    flexDirection: 'row',
+    height: 60,
+    borderTopWidth: 1,
+    position: 'fixed',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingBottom: 4,
+  },
+  webTabItem: {
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
+    flex: 1,
   },
-  innerContainer: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.five,
-    borderRadius: Spacing.five,
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexGrow: 1,
-    gap: Spacing.two,
-    maxWidth: MaxContentWidth,
-  },
-  brandText: {
-    marginRight: 'auto',
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  tabButtonView: {
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.three,
-  },
-  externalPressable: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.one,
-    marginLeft: Spacing.three,
-  },
+  webTabLabel: {
+    fontSize: 10,
+    marginTop: 4,
+    fontWeight: '500',
+  }
 });

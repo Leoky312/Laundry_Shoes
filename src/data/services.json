@@ -1,0 +1,57 @@
+[
+  {
+    "id": 18,
+    "name": "Deep Cleaning",
+    "description": "Pembersihan mendalam dan menyeluruh pada seluruh bagian sepatu (upper, midsole, outsole, insole, dan tali) untuk noda membandel.",
+    "duration": "2 - 3 Hari",
+    "price": "35000",
+    "image": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop&q=80",
+    "isActive": true,
+    "createdAt": "2026-10-06T07:18:11.318Z",
+    "updatedAt": "2026-10-06T07:18:11.318Z"
+  },
+  {
+    "id": 19,
+    "name": "Express Cleaning 1 Day",
+    "description": "Pembersihan cepat bagian luar (upper dan midsole) untuk mengangkat debu dan kotoran ringan harian. Selesai dalam hitungan jam.",
+    "duration": "1 Hari",
+    "price": "15000",
+    "image": "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=600&auto=format&fit=crop&q=80",
+    "isActive": true,
+    "createdAt": "2026-10-06T07:18:11.325Z",
+    "updatedAt": "2026-10-06T07:18:11.325Z"
+  },
+  {
+    "id": 20,
+    "name": "Unyellowing",
+    "description": "Treatment khusus menghilangkan oksidasi warna kuning membandel pada midsole sepatu putih agar kembali cerah seperti baru.",
+    "duration": "2 - 3 Hari",
+    "price": "60000",
+    "image": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&auto=format&fit=crop&q=80",
+    "isActive": true,
+    "createdAt": "2026-10-06T07:18:11.330Z",
+    "updatedAt": "2026-10-06T07:18:11.330Z"
+  },
+  {
+    "id": 21,
+    "name": "Whitening",
+    "description": "Perawatan ekstra khusus untuk sepatu kanvas/leather warna putih cerah dengan formula pencerah anti-kusam.",
+    "duration": "2 Hari",
+    "price": "60000",
+    "image": "https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=600&auto=format&fit=crop&q=80",
+    "isActive": true,
+    "createdAt": "2026-10-06T07:18:11.336Z",
+    "updatedAt": "2026-10-06T07:18:11.336Z"
+  },
+  {
+    "id": 22,
+    "name": "Waterproof",
+    "description": "Pelapisan nano spray pelindung hydrophobic untuk mencegah air, minyak, kopi, dan lumpur meresap ke bahan sepatu.",
+    "duration": "1 Hari",
+    "price": "45000",
+    "image": "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=600&auto=format&fit=crop&q=80",
+    "isActive": true,
+    "createdAt": "2026-10-06T07:18:11.341Z",
+    "updatedAt": "2026-10-06T07:18:11.341Z"
+  }
+]
