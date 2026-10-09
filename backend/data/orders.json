@@ -1,0 +1,64 @@
+[
+  {
+    "id": 1,
+    "orderNumber": "ORD-20261009-5399",
+    "userId": 9,
+    "pickupDate": "2026-10-10T09:45:39.319Z",
+    "deliveryDate": null,
+    "status": "DICUCI",
+    "totalAmount": 35000,
+    "notes": "Sepatu lari noda lumpur setelah marathon",
+    "orderItems": [
+      {
+        "id": 1,
+        "serviceId": 18,
+        "service": {
+          "id": 18,
+          "name": "Deep Cleaning",
+          "description": "Pembersihan mendalam dan menyeluruh pada seluruh bagian sepatu (upper, midsole, outsole, insole, dan tali) untuk noda membandel.",
+          "duration": "2 - 3 Hari",
+          "price": "35000",
+          "image": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop&q=80",
+          "isActive": true,
+          "createdAt": "2026-10-06T07:18:11.318Z",
+          "updatedAt": "2026-10-06T07:18:11.318Z"
+        },
+        "shoeBrand": "Nike Pegasus 40",
+        "shoeColor": "Blue / Orange",
+        "shoeSize": "43",
+        "notes": "Upper kotor, bersihkan teliti",
+        "price": 35000,
+        "quantity": 1
+      }
+    ],
+    "payment": {
+      "id": 1,
+      "paymentMethod": "TRANSFER_BANK",
+      "paymentStatus": "MENUNGGU_PEMBAYARAN",
+      "amount": 35000,
+      "paymentProof": null,
+      "paidAt": null,
+      "createdAt": "2026-10-09T09:45:39.323Z",
+      "updatedAt": "2026-10-09T09:45:39.323Z"
+    },
+    "tracking": [
+      {
+        "id": 1,
+        "status": "MENUNGGU",
+        "description": "Pesanan berhasil dibuat. Menunggu konfirmasi dan jadwal jemput sepatu.",
+        "updatedBy": "Sistem",
+        "createdAt": "2026-10-09T09:45:39.323Z"
+      },
+      {
+        "id": 2,
+        "status": "DICUCI",
+        "description": "Sepatu sedang dalam tahap pencucian mendalam dengan cairan khusus.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-09T09:45:39.400Z"
+      }
+    ],
+    "galleries": [],
+    "createdAt": "2026-10-09T09:45:39.323Z",
+    "updatedAt": "2026-10-09T09:45:39.401Z"
+  }
+]

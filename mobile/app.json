@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "ShoeFresh",
+    "slug": "ShoeFresh",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F4F9F4",
+        "foregroundImage": "./assets/logo.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/logo.png"
+    }
+  }
+}

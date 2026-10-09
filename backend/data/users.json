@@ -1,0 +1,26 @@
+[
+  {
+    "id": 8,
+    "name": "Admin Shoes",
+    "email": "admin@laundryshoes.com",
+    "password": "$2a$10$G.4yk/nIuTANYA97ZKsKCur4ZLavfGRtDvJEyCIPDTRgixwNLGYgu",
+    "phone": "081234567890",
+    "address": "Workshop Laundry Shoes, Jl. Sudirman No. 88, Jakarta",
+    "role": "ADMIN",
+    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop",
+    "createdAt": "2026-10-06T07:18:11.303Z",
+    "updatedAt": "2026-10-06T07:18:11.303Z"
+  },
+  {
+    "id": 9,
+    "name": "Rian Pratama",
+    "email": "customer@gmail.com",
+    "password": "$2a$10$G.4yk/nIuTANYA97ZKsKCuESUm8xCABrxkc0qESmYTOBEoQGXX46y",
+    "phone": "089876543210",
+    "address": "Jl. Melati No. 12, Kebayoran Baru, Jakarta Selatan",
+    "role": "CUSTOMER",
+    "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop",
+    "createdAt": "2026-10-06T07:18:11.312Z",
+    "updatedAt": "2026-10-06T07:18:11.312Z"
+  }
+]
