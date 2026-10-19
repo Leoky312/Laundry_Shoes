@@ -1,0 +1,554 @@
+[
+  {
+    "id": 1,
+    "orderNumber": "ORD-20261013-1001",
+    "userId": 9,
+    "pickupDate": "2026-10-14T09:00:00.000Z",
+    "deliveryDate": null,
+    "status": "MENUNGGU",
+    "totalAmount": 35000,
+    "notes": "Tolong dijemput pagi sekitar jam 9",
+    "orderItems": [
+      {
+        "id": 1,
+        "serviceId": 18,
+        "service": {
+          "id": 18,
+          "name": "Deep Cleaning",
+          "description": "Pembersihan mendalam dan menyeluruh pada seluruh bagian sepatu.",
+          "duration": "2 - 3 Hari",
+          "price": "35000",
+          "image": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop&q=80",
+          "isActive": true
+        },
+        "shoeBrand": "Nike Air Force 1",
+        "shoeColor": "Triple White",
+        "shoeSize": "42",
+        "notes": "Ada bercak kopi di bagian toe box",
+        "price": 35000,
+        "quantity": 1
+      }
+    ],
+    "payment": {
+      "id": 1,
+      "paymentMethod": "QRIS",
+      "paymentStatus": "MENUNGGU_PEMBAYARAN",
+      "amount": 35000,
+      "paymentProof": null,
+      "paidAt": null,
+      "createdAt": "2026-10-13T07:30:00.000Z",
+      "updatedAt": "2026-10-13T07:30:00.000Z"
+    },
+    "tracking": [
+      {
+        "id": 1,
+        "status": "MENUNGGU",
+        "description": "Pesanan dibuat. Menunggu konfirmasi kurir jemput.",
+        "updatedBy": "Sistem",
+        "createdAt": "2026-10-13T07:30:00.000Z"
+      }
+    ],
+    "galleries": [],
+    "createdAt": "2026-10-13T07:30:00.000Z",
+    "updatedAt": "2026-10-13T07:30:00.000Z"
+  },
+  {
+    "id": 2,
+    "orderNumber": "ORD-20261012-1002",
+    "userId": 9,
+    "pickupDate": "2026-10-12T10:00:00.000Z",
+    "deliveryDate": null,
+    "status": "DIPROSES",
+    "totalAmount": 60000,
+    "notes": "Midsole sudah menguning parah",
+    "orderItems": [
+      {
+        "id": 2,
+        "serviceId": 20,
+        "service": {
+          "id": 20,
+          "name": "Unyellowing Midsole",
+          "description": "Treatment kimia khusus menghilangkan oksidasi warna kuning.",
+          "duration": "2 - 3 Hari",
+          "price": "60000",
+          "image": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&auto=format&fit=crop&q=80",
+          "isActive": true
+        },
+        "shoeBrand": "Adidas Ultraboost 21",
+        "shoeColor": "Core White",
+        "shoeSize": "43",
+        "notes": "Boost sole menguning karena pemakaian outdoor",
+        "price": 60000,
+        "quantity": 1
+      }
+    ],
+    "payment": {
+      "id": 2,
+      "paymentMethod": "TRANSFER_BANK",
+      "paymentStatus": "SUDAH_DIBAYAR",
+      "amount": 60000,
+      "paymentProof": "https://images.unsplash.com/photo-1554415707-9e49017aed81?w=500&auto=format&fit=crop",
+      "paidAt": "2026-10-12T10:15:00.000Z",
+      "createdAt": "2026-10-12T10:05:00.000Z",
+      "updatedAt": "2026-10-12T10:15:00.000Z"
+    },
+    "tracking": [
+      {
+        "id": 2,
+        "status": "MENUNGGU",
+        "description": "Pesanan dibuat customer.",
+        "updatedBy": "Sistem",
+        "createdAt": "2026-10-12T10:05:00.000Z"
+      },
+      {
+        "id": 3,
+        "status": "DIPROSES",
+        "description": "Sepatu telah tiba di workshop dan dijadwalkan pengerjaan.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-12T11:00:00.000Z"
+      }
+    ],
+    "galleries": [
+      {
+        "id": 1,
+        "type": "SEBELUM",
+        "imageUrl": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&auto=format&fit=crop",
+        "caption": "Kondisi awal: Midsole kuning kecoklatan",
+        "createdAt": "2026-10-12T11:05:00.000Z"
+      }
+    ],
+    "createdAt": "2026-10-12T10:05:00.000Z",
+    "updatedAt": "2026-10-12T11:00:00.000Z"
+  },
+  {
+    "id": 3,
+    "orderNumber": "ORD-20261011-1003",
+    "userId": 9,
+    "pickupDate": "2026-10-11T13:00:00.000Z",
+    "deliveryDate": null,
+    "status": "DICUCI",
+    "totalAmount": 70000,
+    "notes": "2 pasang sepatu lari",
+    "orderItems": [
+      {
+        "id": 3,
+        "serviceId": 18,
+        "service": {
+          "id": 18,
+          "name": "Deep Cleaning",
+          "description": "Pembersihan mendalam dan menyeluruh.",
+          "duration": "2 - 3 Hari",
+          "price": "35000",
+          "image": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop&q=80",
+          "isActive": true
+        },
+        "shoeBrand": "New Balance 574",
+        "shoeColor": "Grey",
+        "shoeSize": "42",
+        "notes": "Suede kotor",
+        "price": 35000,
+        "quantity": 1
+      },
+      {
+        "id": 4,
+        "serviceId": 18,
+        "service": {
+          "id": 18,
+          "name": "Deep Cleaning",
+          "description": "Pembersihan mendalam dan menyeluruh.",
+          "duration": "2 - 3 Hari",
+          "price": "35000",
+          "image": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop&q=80",
+          "isActive": true
+        },
+        "shoeBrand": "Vans Old Skool",
+        "shoeColor": "Black / White",
+        "shoeSize": "41",
+        "notes": "Foxing kotor",
+        "price": 35000,
+        "quantity": 1
+      }
+    ],
+    "payment": {
+      "id": 3,
+      "paymentMethod": "QRIS",
+      "paymentStatus": "SUDAH_DIBAYAR",
+      "amount": 70000,
+      "paymentProof": "https://images.unsplash.com/photo-1554415707-9e49017aed81?w=500&auto=format&fit=crop",
+      "paidAt": "2026-10-11T13:10:00.000Z",
+      "createdAt": "2026-10-11T13:00:00.000Z",
+      "updatedAt": "2026-10-11T13:10:00.000Z"
+    },
+    "tracking": [
+      {
+        "id": 4,
+        "status": "MENUNGGU",
+        "description": "Pesanan dibuat.",
+        "updatedBy": "Sistem",
+        "createdAt": "2026-10-11T13:00:00.000Z"
+      },
+      {
+        "id": 5,
+        "status": "DIPROSES",
+        "description": "Sepatu siap masuk antrian pencucian.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-11T14:30:00.000Z"
+      },
+      {
+        "id": 6,
+        "status": "DICUCI",
+        "description": "Sedang dicuci mendalam dengan cairan khusus suede & kanvas.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-12T09:15:00.000Z"
+      }
+    ],
+    "galleries": [
+      {
+        "id": 2,
+        "type": "PROSES",
+        "imageUrl": "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=600&auto=format&fit=crop",
+        "caption": "Proses brushing busa premium",
+        "createdAt": "2026-10-12T09:20:00.000Z"
+      }
+    ],
+    "createdAt": "2026-10-11T13:00:00.000Z",
+    "updatedAt": "2026-10-12T09:15:00.000Z"
+  },
+  {
+    "id": 4,
+    "orderNumber": "ORD-20261010-1004",
+    "userId": 9,
+    "pickupDate": "2026-10-10T14:00:00.000Z",
+    "deliveryDate": null,
+    "status": "DRYING",
+    "totalAmount": 80000,
+    "notes": "Cuci express + nano spray",
+    "orderItems": [
+      {
+        "id": 5,
+        "serviceId": 19,
+        "service": {
+          "id": 19,
+          "name": "Express Cleaning 1 Day",
+          "description": "Pembersihan cepat 24 jam.",
+          "duration": "1 Hari",
+          "price": "25000",
+          "image": "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=600&auto=format&fit=crop&q=80",
+          "isActive": true
+        },
+        "shoeBrand": "Converse Chuck 70",
+        "shoeColor": "Black",
+        "shoeSize": "42",
+        "notes": "",
+        "price": 25000,
+        "quantity": 1
+      },
+      {
+        "id": 6,
+        "serviceId": 21,
+        "service": {
+          "id": 21,
+          "name": "Whitening Treatment",
+          "description": "Perawatan ekstra sepatu kanvas/kulit putih.",
+          "duration": "2 Hari",
+          "price": "55000",
+          "image": "https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=600&auto=format&fit=crop&q=80",
+          "isActive": true
+        },
+        "shoeBrand": "Nike Air Jordan 1 Low",
+        "shoeColor": "White / Wolf Grey",
+        "shoeSize": "43",
+        "notes": "",
+        "price": 55000,
+        "quantity": 1
+      }
+    ],
+    "payment": {
+      "id": 4,
+      "paymentMethod": "TRANSFER_BANK",
+      "paymentStatus": "SUDAH_DIBAYAR",
+      "amount": 80000,
+      "paymentProof": "https://images.unsplash.com/photo-1554415707-9e49017aed81?w=500&auto=format&fit=crop",
+      "paidAt": "2026-10-10T14:10:00.000Z",
+      "createdAt": "2026-10-10T14:00:00.000Z",
+      "updatedAt": "2026-10-10T14:10:00.000Z"
+    },
+    "tracking": [
+      {
+        "id": 7,
+        "status": "MENUNGGU",
+        "description": "Pesanan dibuat.",
+        "updatedBy": "Sistem",
+        "createdAt": "2026-10-10T14:00:00.000Z"
+      },
+      {
+        "id": 8,
+        "status": "DIPROSES",
+        "description": "Sepatu diterima di workshop.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-10T15:00:00.000Z"
+      },
+      {
+        "id": 9,
+        "status": "DICUCI",
+        "description": "Proses pencucian selesai.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-11T09:00:00.000Z"
+      },
+      {
+        "id": 10,
+        "status": "DRYING",
+        "description": "Sepatu sedang di ruang pengeringan suhu terkontrol dengan sirkulasi angin.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-11T14:00:00.000Z"
+      }
+    ],
+    "galleries": [],
+    "createdAt": "2026-10-10T14:00:00.000Z",
+    "updatedAt": "2026-10-11T14:00:00.000Z"
+  },
+  {
+    "id": 5,
+    "orderNumber": "ORD-20261009-1005",
+    "userId": 10,
+    "pickupDate": "2026-10-09T09:00:00.000Z",
+    "deliveryDate": null,
+    "status": "FINISHING",
+    "totalAmount": 50000,
+    "notes": "Sepatu kulit pantofel untuk kerja",
+    "orderItems": [
+      {
+        "id": 7,
+        "serviceId": 23,
+        "service": {
+          "id": 23,
+          "name": "Leather Polish & Conditioning",
+          "description": "Perawatan khusus sepatu kulit asli/sintetis.",
+          "duration": "2 Hari",
+          "price": "50000",
+          "image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80",
+          "isActive": true
+        },
+        "shoeBrand": "Clarks Derby Leather",
+        "shoeColor": "Dark Brown",
+        "shoeSize": "41",
+        "notes": "Kulit agak kusam, mohon dikilapkan",
+        "price": 50000,
+        "quantity": 1
+      }
+    ],
+    "payment": {
+      "id": 5,
+      "paymentMethod": "CASH",
+      "paymentStatus": "SUDAH_DIBAYAR",
+      "amount": 50000,
+      "paymentProof": null,
+      "paidAt": "2026-10-09T09:30:00.000Z",
+      "createdAt": "2026-10-09T09:00:00.000Z",
+      "updatedAt": "2026-10-09T09:30:00.000Z"
+    },
+    "tracking": [
+      {
+        "id": 11,
+        "status": "MENUNGGU",
+        "description": "Pesanan dibuat.",
+        "updatedBy": "Sistem",
+        "createdAt": "2026-10-09T09:00:00.000Z"
+      },
+      {
+        "id": 12,
+        "status": "DIPROSES",
+        "description": "Sepatu diterima di kasir workshop.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-09T09:30:00.000Z"
+      },
+      {
+        "id": 13,
+        "status": "DICUCI",
+        "description": "Deep cleaning selesai.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-10T10:00:00.000Z"
+      },
+      {
+        "id": 14,
+        "status": "DRYING",
+        "description": "Pengeringan selesai.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-10T16:00:00.000Z"
+      },
+      {
+        "id": 15,
+        "status": "FINISHING",
+        "description": "Pemberian nutrisi balsam kulit, semprotan antibakteri, dan packing.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-11T11:00:00.000Z"
+      }
+    ],
+    "galleries": [],
+    "createdAt": "2026-10-09T09:00:00.000Z",
+    "updatedAt": "2026-10-11T11:00:00.000Z"
+  },
+  {
+    "id": 6,
+    "orderNumber": "ORD-20261008-1006",
+    "userId": 9,
+    "pickupDate": "2026-10-08T08:00:00.000Z",
+    "deliveryDate": "2026-10-10T15:00:00.000Z",
+    "status": "SELESAI",
+    "totalAmount": 120000,
+    "notes": "Repaint sol dan upper hitam",
+    "orderItems": [
+      {
+        "id": 8,
+        "serviceId": 24,
+        "service": {
+          "id": 24,
+          "name": "Repaint & Color Restore",
+          "description": "Pengecatan ulang warna sepatu yang pudar.",
+          "duration": "4 - 5 Hari",
+          "price": "120000",
+          "image": "https://images.unsplash.com/photo-1515955656352-a1fa3ffcd111?w=600&auto=format&fit=crop&q=80",
+          "isActive": true
+        },
+        "shoeBrand": "Nike Dunk Low Retro",
+        "shoeColor": "Panda Black/White",
+        "shoeSize": "42",
+        "notes": "Bagian hitam sudah pudar kena matahari",
+        "price": 120000,
+        "quantity": 1
+      }
+    ],
+    "payment": {
+      "id": 6,
+      "paymentMethod": "TRANSFER_BANK",
+      "paymentStatus": "SUDAH_DIBAYAR",
+      "amount": 120000,
+      "paymentProof": "https://images.unsplash.com/photo-1554415707-9e49017aed81?w=500&auto=format&fit=crop",
+      "paidAt": "2026-10-08T08:15:00.000Z",
+      "createdAt": "2026-10-08T08:00:00.000Z",
+      "updatedAt": "2026-10-08T08:15:00.000Z"
+    },
+    "tracking": [
+      {
+        "id": 16,
+        "status": "MENUNGGU",
+        "description": "Pesanan dibuat.",
+        "updatedBy": "Sistem",
+        "createdAt": "2026-10-08T08:00:00.000Z"
+      },
+      {
+        "id": 17,
+        "status": "DIPROSES",
+        "description": "Sepatu diterima di workshop.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-08T09:00:00.000Z"
+      },
+      {
+        "id": 18,
+        "status": "DICUCI",
+        "description": "Pembersihan awal sebelum pengecatan.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-08T14:00:00.000Z"
+      },
+      {
+        "id": 19,
+        "status": "DRYING",
+        "description": "Pengeringan cat akrilik fleksibel.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-09T16:00:00.000Z"
+      },
+      {
+        "id": 20,
+        "status": "FINISHING",
+        "description": "Finisher pelindung cat dan quality inspection.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-10T10:00:00.000Z"
+      },
+      {
+        "id": 21,
+        "status": "SELESAI",
+        "description": "Sepatu telah selesai sempurna dan diserahkan ke customer.",
+        "updatedBy": "Admin Shoes",
+        "createdAt": "2026-10-10T15:00:00.000Z"
+      }
+    ],
+    "galleries": [
+      {
+        "id": 3,
+        "type": "SEBELUM",
+        "imageUrl": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&auto=format&fit=crop",
+        "caption": "Kondisi awal sebelum repaint",
+        "createdAt": "2026-10-08T09:10:00.000Z"
+      },
+      {
+        "id": 4,
+        "type": "SESUDAH",
+        "imageUrl": "https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=600&auto=format&fit=crop",
+        "caption": "Hasil akhir: Warna hitam pekat dan glossy",
+        "createdAt": "2026-10-10T14:30:00.000Z"
+      }
+    ],
+    "createdAt": "2026-10-08T08:00:00.000Z",
+    "updatedAt": "2026-10-10T15:00:00.000Z"
+  },
+  {
+    "id": 7,
+    "orderNumber": "ORD-20261007-1007",
+    "userId": 11,
+    "pickupDate": "2026-10-07T11:00:00.000Z",
+    "deliveryDate": null,
+    "status": "DIBATALKAN",
+    "totalAmount": 35000,
+    "notes": "Pesanan salah pilih alamat",
+    "orderItems": [
+      {
+        "id": 9,
+        "serviceId": 18,
+        "service": {
+          "id": 18,
+          "name": "Deep Cleaning",
+          "description": "Pembersihan mendalam.",
+          "duration": "2 - 3 Hari",
+          "price": "35000",
+          "image": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop&q=80",
+          "isActive": true
+        },
+        "shoeBrand": "Puma Suede Classic",
+        "shoeColor": "Navy Blue",
+        "shoeSize": "43",
+        "notes": "",
+        "price": 35000,
+        "quantity": 1
+      }
+    ],
+    "payment": {
+      "id": 7,
+      "paymentMethod": "TRANSFER_BANK",
+      "paymentStatus": "GAGAL",
+      "amount": 35000,
+      "paymentProof": null,
+      "paidAt": null,
+      "createdAt": "2026-10-07T11:00:00.000Z",
+      "updatedAt": "2026-10-07T11:30:00.000Z"
+    },
+    "tracking": [
+      {
+        "id": 22,
+        "status": "MENUNGGU",
+        "description": "Pesanan dibuat.",
+        "updatedBy": "Sistem",
+        "createdAt": "2026-10-07T11:00:00.000Z"
+      },
+      {
+        "id": 23,
+        "status": "DIBATALKAN",
+        "description": "Pesanan dibatalkan oleh pengguna.",
+        "updatedBy": "Budi Santoso",
+        "createdAt": "2026-10-07T11:30:00.000Z"
+      }
+    ],
+    "galleries": [],
+    "createdAt": "2026-10-07T11:00:00.000Z",
+    "updatedAt": "2026-10-07T11:30:00.000Z"
+  }
+]
