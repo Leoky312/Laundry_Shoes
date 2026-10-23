@@ -1,0 +1,79 @@
+[
+  {
+    "id": 18,
+    "name": "Deep Cleaning",
+    "description": "Pembersihan mendalam dan menyeluruh pada seluruh bagian sepatu (upper, midsole, outsole, insole, dan tali) untuk noda membandel dan bau tidak sedap.",
+    "duration": "2 - 3 Hari",
+    "price": "35000",
+    "image": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop&q=80",
+    "isActive": true,
+    "createdAt": "2026-10-06T07:18:11.318Z",
+    "updatedAt": "2026-10-06T07:18:11.318Z"
+  },
+  {
+    "id": 19,
+    "name": "Express Cleaning 1 Day",
+    "description": "Pembersihan cepat bagian luar (upper dan midsole) untuk mengangkat debu dan kotoran ringan harian. Selesai dalam 24 jam.",
+    "duration": "1 Hari",
+    "price": "25000",
+    "image": "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=600&auto=format&fit=crop&q=80",
+    "isActive": true,
+    "createdAt": "2026-10-06T07:18:11.325Z",
+    "updatedAt": "2026-10-06T07:18:11.325Z"
+  },
+  {
+    "id": 20,
+    "name": "Unyellowing Midsole",
+    "description": "Treatment kimia khusus menghilangkan oksidasi warna kuning membandel pada midsole sepatu karet/boost agar kembali putih cerah.",
+    "duration": "2 - 3 Hari",
+    "price": "60000",
+    "image": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&auto=format&fit=crop&q=80",
+    "isActive": true,
+    "createdAt": "2026-10-06T07:18:11.330Z",
+    "updatedAt": "2026-10-06T07:18:11.330Z"
+  },
+  {
+    "id": 21,
+    "name": "Whitening Treatment",
+    "description": "Perawatan ekstra khusus untuk sepatu kanvas/mesh/kulit warna putih cerah dengan formula pencerah anti-kusam.",
+    "duration": "2 Hari",
+    "price": "55000",
+    "image": "https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=600&auto=format&fit=crop&q=80",
+    "isActive": true,
+    "createdAt": "2026-10-06T07:18:11.336Z",
+    "updatedAt": "2026-10-06T07:18:11.336Z"
+  },
+  {
+    "id": 22,
+    "name": "Waterproof Nano Spray",
+    "description": "Pelapisan nano spray pelindung hydrophobic untuk mencegah air, kopi, saus, dan lumpur meresap ke serat kain sepatu.",
+    "duration": "1 Hari",
+    "price": "45000",
+    "image": "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=600&auto=format&fit=crop&q=80",
+    "isActive": true,
+    "createdAt": "2026-10-06T07:18:11.341Z",
+    "updatedAt": "2026-10-06T07:18:11.341Z"
+  },
+  {
+    "id": 23,
+    "name": "Leather Polish & Conditioning",
+    "description": "Perawatan khusus sepatu kulit asli/sintetis dengan balsam nutrisi kulit agar lentur, mengkilap, dan tidak mudah retak.",
+    "duration": "2 Hari",
+    "price": "50000",
+    "image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80",
+    "isActive": true,
+    "createdAt": "2026-10-08T04:00:00.000Z",
+    "updatedAt": "2026-10-08T04:00:00.000Z"
+  },
+  {
+    "id": 24,
+    "name": "Repaint & Color Restore",
+    "description": "Pengecatan ulang warna sepatu yang pudar atau kusam menggunakan cat akrilik fleksibel khusus material sepatu berkualitas tinggi.",
+    "duration": "4 - 5 Hari",
+    "price": "120000",
+    "image": "https://images.unsplash.com/photo-1515955656352-a1fa3ffcd111?w=600&auto=format&fit=crop&q=80",
+    "isActive": true,
+    "createdAt": "2026-10-08T04:00:00.000Z",
+    "updatedAt": "2026-10-08T04:00:00.000Z"
+  }
+]
