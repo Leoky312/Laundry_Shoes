@@ -78,13 +78,8 @@ const ManageServicesScreen = () => {
   const [serviceToDelete, setServiceToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    fetchServices();
-  }, []);
-
   const fetchServices = async () => {
     try {
-      setLoading(true);
       const res = await api.get('/services?all=true');
       if (res.data) {
         setServices(res.data);
@@ -98,7 +93,12 @@ const ManageServicesScreen = () => {
     }
   };
 
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
   const onRefresh = () => {
+    setLoading(true);
     setRefreshing(true);
     fetchServices();
   };
@@ -658,7 +658,7 @@ const ManageServicesScreen = () => {
             <Text style={styles.deleteDesc}>
               Apakah Anda yakin ingin menghapus layanan{' '}
               <Text style={{ fontWeight: '700', color: Colors.text }}>
-                "{serviceToDelete?.name}"
+                &ldquo;{serviceToDelete?.name}&rdquo;
               </Text>
               ? Jika layanan ini sudah memiliki riwayat pesanan, statusnya akan dinonaktifkan
               secara aman.

@@ -16,6 +16,7 @@ export default function CustomerTabsLayout() {
 
   return (
     <Tabs
+      id="customerTabs"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: Colors.primary,
@@ -52,7 +53,7 @@ export default function CustomerTabsLayout() {
         options={{
           tabBarLabel: 'Beranda',
           tabBarIcon: ({ focused, color }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color as string} />
           ),
         }}
       />
@@ -61,7 +62,7 @@ export default function CustomerTabsLayout() {
         options={{
           tabBarLabel: 'Pesanan',
           tabBarIcon: ({ focused, color }) => (
-            <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={22} color={color as string} />
           ),
         }}
       />
@@ -70,7 +71,7 @@ export default function CustomerTabsLayout() {
         options={{
           tabBarLabel: 'Profil',
           tabBarIcon: ({ focused, color }) => (
-            <Ionicons name={focused ? 'person' : 'person-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={22} color={color as string} />
           ),
         }}
       />

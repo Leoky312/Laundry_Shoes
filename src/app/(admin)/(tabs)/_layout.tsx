@@ -16,6 +16,7 @@ export default function AdminTabsLayout() {
 
   return (
     <Tabs
+      id="adminTabs"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: Colors.primary,
@@ -52,7 +53,7 @@ export default function AdminTabsLayout() {
         options={{
           tabBarLabel: 'Dashboard',
           tabBarIcon: ({ focused, color }) => (
-            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color as string} />
           ),
         }}
       />
@@ -61,7 +62,7 @@ export default function AdminTabsLayout() {
         options={{
           tabBarLabel: 'Pesanan',
           tabBarIcon: ({ focused, color }) => (
-            <Ionicons name={focused ? 'file-tray-full' : 'file-tray-full-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'file-tray-full' : 'file-tray-full-outline'} size={22} color={color as string} />
           ),
         }}
       />
@@ -70,7 +71,7 @@ export default function AdminTabsLayout() {
         options={{
           tabBarLabel: 'Layanan',
           tabBarIcon: ({ focused, color }) => (
-            <Ionicons name={focused ? 'sparkles' : 'sparkles-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'sparkles' : 'sparkles-outline'} size={22} color={color as string} />
           ),
         }}
       />
@@ -79,7 +80,7 @@ export default function AdminTabsLayout() {
         options={{
           tabBarLabel: 'Laporan',
           tabBarIcon: ({ focused, color }) => (
-            <Ionicons name={focused ? 'bar-chart' : 'bar-chart-outline'} size={22} color={color} />
+            <Ionicons name={focused ? 'bar-chart' : 'bar-chart-outline'} size={22} color={color as string} />
           ),
         }}
       />
