@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/colors';
 import api from '../services/api';
 import { useCart } from '../context/CartContext';
+import ErrorState from '../components/ErrorState';
 
 const DetailServiceScreen = ({ route, navigation }) => {
   const { serviceId } = route.params || {};
@@ -22,6 +23,7 @@ const DetailServiceScreen = ({ route, navigation }) => {
 
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
   const { addToCart, cart } = useCart();
@@ -33,13 +35,17 @@ const DetailServiceScreen = ({ route, navigation }) => {
   const fetchDetail = async () => {
     try {
       setLoading(true);
+      setError(null);
       const targetId = serviceId || 1;
       const res = await api.get(`/services/${targetId}`);
-      if (res.data) {
+      if (res?.data) {
         setService(res.data);
+      } else {
+        setError('Data layanan tidak ditemukan.');
       }
     } catch (err) {
       console.log('Error fetching service detail:', err.message);
+      setError(err.message || 'Gagal memuat detail layanan.');
     } finally {
       setLoading(false);
     }
@@ -60,10 +66,29 @@ const DetailServiceScreen = ({ route, navigation }) => {
     return 'https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=600&fit=crop';
   };
 
-  if (loading || !service) {
+  if (loading) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#236B38" />
+      </View>
+    );
+  }
+
+  if (error || !service) {
+    return (
+      <View style={[styles.screen, styles.centerContainer, { paddingHorizontal: 24 }]}>
+        <ErrorState
+          title="Detail Layanan Tidak Ditemukan"
+          message={error || 'Layanan yang Anda cari tidak tersedia.'}
+          onRetry={fetchDetail}
+          retryText="Coba Lagi"
+        />
+        <TouchableOpacity
+          style={{ marginTop: 12, paddingVertical: 8, paddingHorizontal: 16 }}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={{ color: '#236B38', fontWeight: '600', fontSize: 14 }}>Kembali</Text>
+        </TouchableOpacity>
       </View>
     );
   }

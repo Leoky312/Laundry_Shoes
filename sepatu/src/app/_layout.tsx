@@ -5,6 +5,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Platform } from 'react-native';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
+import { NetworkProvider } from '@/context/NetworkContext';
+import OfflineBanner from '@/components/OfflineBanner';
 
 import { useRouter, useSegments } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
@@ -51,19 +53,22 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <CartProvider>
-          <AuthGate>
-            <StatusBar style="dark" />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(customer)" />
-              <Stack.Screen name="(admin)" />
-            </Stack>
-          </AuthGate>
-        </CartProvider>
-      </AuthProvider>
+      <NetworkProvider>
+        <AuthProvider>
+          <CartProvider>
+            <AuthGate>
+              <StatusBar style="dark" />
+              <OfflineBanner />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(customer)" />
+                <Stack.Screen name="(admin)" />
+              </Stack>
+            </AuthGate>
+          </CartProvider>
+        </AuthProvider>
+      </NetworkProvider>
     </SafeAreaProvider>
   );
 }

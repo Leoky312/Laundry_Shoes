@@ -32,6 +32,13 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Aplikasi ShoeFresh membutuhkan izin akses foto untuk memilih gambar sepatu dan bukti pembayaran.",
+          "cameraPermission": "Aplikasi ShoeFresh membutuhkan izin kamera untuk memotret kondisi sepatu dan struk bukti transfer."
+        }
       ]
     ],
     "experiments": {

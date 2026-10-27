@@ -16,6 +16,7 @@ import Colors from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import api from '../services/api';
+import ErrorState from '../components/ErrorState';
 
 const HomeScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -25,6 +26,7 @@ const HomeScreen = ({ navigation }) => {
 
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -34,12 +36,14 @@ const HomeScreen = ({ navigation }) => {
   const fetchServices = async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await api.get('/services');
-      if (res.data) {
+      if (res?.data) {
         setServices(res.data);
       }
     } catch (err) {
       console.log('Error fetching services:', err.message);
+      setError(err.message || 'Gagal memuat daftar layanan.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -196,6 +200,13 @@ const HomeScreen = ({ navigation }) => {
           {/* Service Cards: Kotak ke Bawah (Vertical Grid) */}
           {loading && !refreshing ? (
             <ActivityIndicator size="small" color="#236B38" style={{ marginVertical: 30 }} />
+          ) : error && services.length === 0 ? (
+            <ErrorState
+              title="Gagal Memuat Layanan"
+              message={error}
+              onRetry={fetchServices}
+              retryText="Muat Ulang"
+            />
           ) : (
             <View style={styles.servicesGrid}>
               {services.map((item, idx) => (

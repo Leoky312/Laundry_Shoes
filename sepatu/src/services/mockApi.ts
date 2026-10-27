@@ -171,7 +171,24 @@ export const mockApi = {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const orderNumber = `ORD-${dateStr}-${randomSuffix}`;
 
-    const items = (orderPayload.items || []).map((item: any, idx: number) => {
+    let payload = orderPayload;
+    if (orderPayload && typeof (orderPayload as any).get === 'function') {
+      try {
+        const rawItems = (orderPayload as any).get('items');
+        payload = {
+          items: typeof rawItems === 'string' ? JSON.parse(rawItems) : rawItems,
+          paymentMethod: (orderPayload as any).get('paymentMethod'),
+          notes: (orderPayload as any).get('notes'),
+          pickupDate: (orderPayload as any).get('pickupDate'),
+          shoePhoto: (orderPayload as any).get('shoePhoto'),
+          paymentProof: (orderPayload as any).get('paymentProof'),
+        };
+      } catch (_e) {
+        // fallback
+      }
+    }
+
+    const items = (payload.items || []).map((item: any, idx: number) => {
       const s = mockServices.find((svc) => String(svc.id) === String(item.serviceId)) || mockServices[0];
       return {
         id: Date.now() + idx,
@@ -191,23 +208,27 @@ export const mockApi = {
       0
     );
 
+    const hasProof = !!payload.paymentProof;
+    const isCod = payload.paymentMethod === 'COD';
+
     const newOrder = {
       id: Date.now(),
       orderNumber,
       userId,
-      pickupDate: orderPayload.pickupDate || now.toISOString(),
+      pickupDate: payload.pickupDate || now.toISOString(),
       deliveryDate: null,
       status: 'MENUNGGU',
       totalAmount,
-      notes: orderPayload.notes || '',
+      notes: payload.notes || '',
+      shoePhoto: payload.shoePhoto || null,
       orderItems: items,
       payment: {
         id: Date.now(),
-        paymentMethod: orderPayload.paymentMethod || 'QRIS',
-        paymentStatus: 'MENUNGGU_PEMBAYARAN',
+        paymentMethod: payload.paymentMethod || 'QRIS',
+        paymentStatus: hasProof ? 'MENUNGGU_VERIFIKASI' : (isCod ? 'BAYAR_DI_TEMPAT' : 'MENUNGGU_PEMBAYARAN'),
         amount: totalAmount,
-        paymentProof: null,
-        paidAt: null,
+        paymentProof: payload.paymentProof || null,
+        paidAt: hasProof ? now.toISOString() : null,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
       },
@@ -220,7 +241,17 @@ export const mockApi = {
           createdAt: now.toISOString(),
         },
       ],
-      galleries: [],
+      galleries: payload.shoePhoto
+        ? [
+            {
+              id: Date.now(),
+              type: 'BEFORE',
+              imageUrl: payload.shoePhoto,
+              caption: 'Foto Sepatu Sebelum Dicuci',
+              createdAt: now.toISOString(),
+            },
+          ]
+        : [],
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     };
@@ -254,7 +285,7 @@ export const mockApi = {
     if (!order) throw new Error('Pesanan tidak ditemukan.');
     if (order.payment) {
       order.payment.paymentProof = proofUrl;
-      order.payment.paymentStatus = 'SUDAH_DIBAYAR';
+      order.payment.paymentStatus = 'MENUNGGU_VERIFIKASI';
       order.payment.paidAt = new Date().toISOString();
     }
     return { success: true, message: 'Bukti pembayaran berhasil diunggah (Mock).', data: order };
