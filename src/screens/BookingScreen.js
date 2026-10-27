@@ -17,6 +17,7 @@ import Colors from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import api from '../services/api';
+import PhotoPickerModal from '../components/PhotoPickerModal';
 
 const BookingScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -32,12 +33,31 @@ const BookingScreen = ({ navigation }) => {
   const [paymentMethod, setPaymentMethod] = useState('DANA'); // 'DANA' | 'TRANSFER_BANK' | 'COD'
   const [loading, setLoading] = useState(false);
 
+  // Photo sensor states
+  const [shoePhoto, setShoePhoto] = useState(null);
+  const [paymentProof, setPaymentProof] = useState(null);
+  const [photoModalVisible, setPhotoModalVisible] = useState(false);
+  const [photoTarget, setPhotoTarget] = useState('shoe'); // 'shoe' | 'payment'
+
   const subtotal = getSubtotal();
   const deliveryFee = 10000;
   const grandTotal = subtotal + deliveryFee;
 
   const formatRupiah = (val) => {
     return 'Rp ' + parseInt(val || 0).toLocaleString('id-ID');
+  };
+
+  const openCameraPicker = (target) => {
+    setPhotoTarget(target);
+    setPhotoModalVisible(true);
+  };
+
+  const handleImageSelected = (uri) => {
+    if (photoTarget === 'shoe') {
+      setShoePhoto(uri);
+    } else {
+      setPaymentProof(uri);
+    }
   };
 
   const handleBooking = async () => {
@@ -66,7 +86,15 @@ const BookingScreen = ({ navigation }) => {
       formData.append('items', JSON.stringify(items));
       formData.append('paymentMethod', paymentMethod);
       formData.append('notes', notes);
+      formData.append('shoeBrand', shoeBrand || 'Sneakers');
       formData.append('pickupDate', new Date(Date.now() + 86400000).toISOString());
+
+      if (shoePhoto) {
+        formData.append('shoePhoto', shoePhoto);
+      }
+      if (paymentProof) {
+        formData.append('paymentProof', paymentProof);
+      }
 
       const res = await api.post('/orders', formData, {
         headers: {
@@ -127,7 +155,68 @@ const BookingScreen = ({ navigation }) => {
             </View>
           </View>
 
-          {/* Section 2: Pilih Metode Pembayaran */}
+          {/* Section 2: Info & Foto Sepatu yang Akan Dicuci */}
+          <Text style={styles.sectionTitle}>Dokumentasi Sepatu</Text>
+          <View style={styles.cardContainer}>
+            <Text style={styles.inputSubLabel}>Merk & Model Sepatu</Text>
+            <TextInput
+              style={styles.textInputField}
+              placeholder="Contoh: Nike Air Jordan 1 / Adidas Samba"
+              placeholderTextColor="#9CA3AF"
+              value={shoeBrand}
+              onChangeText={setShoeBrand}
+            />
+
+            <Text style={[styles.inputSubLabel, { marginTop: 14 }]}>
+              Foto Kondisi Sepatu (Gunakan Kamera)
+            </Text>
+            <Text style={styles.fieldHint}>
+              Potret sepatu Anda dengan kamera untuk mencatat kondisi awal (noda/sol) sebelum dicuci.
+            </Text>
+
+            {shoePhoto ? (
+              <View style={styles.photoPreviewWrapper}>
+                <Image source={{ uri: shoePhoto }} style={styles.photoPreviewImg} resizeMode="cover" />
+                <View style={styles.photoActionRow}>
+                  <View style={styles.attachedBadge}>
+                    <Ionicons name="checkmark-circle" size={14} color="#16A34A" />
+                    <Text style={styles.attachedBadgeText}>Foto Terlampir</Text>
+                  </View>
+                  <View style={styles.photoBtnGroup}>
+                    <TouchableOpacity
+                      style={styles.retakeBtn}
+                      onPress={() => openCameraPicker('shoe')}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="camera-outline" size={14} color="#236B38" />
+                      <Text style={styles.retakeBtnText}>Foto Ulang</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deletePhotoBtn}
+                      onPress={() => setShoePhoto(null)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.dashedPhotoBox}
+                onPress={() => openCameraPicker('shoe')}
+                activeOpacity={0.8}
+              >
+                <View style={styles.cameraIconCircle}>
+                  <Ionicons name="camera" size={24} color="#236B38" />
+                </View>
+                <Text style={styles.dashedBoxTitle}>Ambil Foto Sepatu dengan Kamera</Text>
+                <Text style={styles.dashedBoxSub}>Ketuk untuk buka kamera ponsel atau galeri</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Section 3: Pilih Metode Pembayaran */}
           <Text style={styles.sectionTitle}>Pilih Metode Pembayaran</Text>
           <View style={styles.paymentMethodsCard}>
             {/* DANA */}
@@ -159,7 +248,9 @@ const BookingScreen = ({ navigation }) => {
                 </View>
                 <Text style={styles.paymentLabel}>Transfer Bank</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+              <View style={[styles.radioCircle, paymentMethod === 'TRANSFER_BANK' && styles.radioActive]}>
+                {paymentMethod === 'TRANSFER_BANK' && <View style={styles.radioDot} />}
+              </View>
             </TouchableOpacity>
 
             {/* COD */}
@@ -174,11 +265,77 @@ const BookingScreen = ({ navigation }) => {
                 </View>
                 <Text style={styles.paymentLabel}>COD (Bayar di Tempat)</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+              <View style={[styles.radioCircle, paymentMethod === 'COD' && styles.radioActive]}>
+                {paymentMethod === 'COD' && <View style={styles.radioDot} />}
+              </View>
             </TouchableOpacity>
           </View>
 
-          {/* Section 3: Catatan (Opsional) */}
+          {/* Sub-Card: Detail Transfer Bank & Bukti Transfer jika memilih TRANSFER_BANK */}
+          {paymentMethod === 'TRANSFER_BANK' && (
+            <View style={styles.bankTransferSection}>
+              <View style={styles.bankHeaderRow}>
+                <View style={styles.bankBadge}>
+                  <Text style={styles.bankBadgeText}>BCA</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.bankTitle}>Bank Central Asia (BCA)</Text>
+                  <Text style={styles.bankNumber}>816-092-8812</Text>
+                  <Text style={styles.bankOwner}>a/n ShoeFresh Laundry Indonesia</Text>
+                </View>
+              </View>
+
+              <View style={styles.bankDivider} />
+
+              <Text style={styles.proofSectionTitle}>Foto Bukti Transfer Bank</Text>
+              <Text style={styles.proofSectionDesc}>
+                Gunakan kamera HP untuk memotret struk ATM / tangkapan layar m-banking.
+              </Text>
+
+              {paymentProof ? (
+                <View style={styles.photoPreviewWrapper}>
+                  <Image source={{ uri: paymentProof }} style={styles.proofPreviewImg} resizeMode="contain" />
+                  <View style={styles.photoActionRow}>
+                    <View style={styles.attachedBadge}>
+                      <Ionicons name="checkmark-circle" size={14} color="#16A34A" />
+                      <Text style={styles.attachedBadgeText}>Struk Terlampir</Text>
+                    </View>
+                    <View style={styles.photoBtnGroup}>
+                      <TouchableOpacity
+                        style={styles.retakeBtn}
+                        onPress={() => openCameraPicker('payment')}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="camera-outline" size={14} color="#236B38" />
+                        <Text style={styles.retakeBtnText}>Ganti</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.deletePhotoBtn}
+                        onPress={() => setPaymentProof(null)}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.dashedPhotoBox, { backgroundColor: '#F0FDF4' }]}
+                  onPress={() => openCameraPicker('payment')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.cameraIconCircle, { backgroundColor: '#DCFCE7' }]}>
+                    <Ionicons name="camera" size={24} color="#16A34A" />
+                  </View>
+                  <Text style={styles.dashedBoxTitle}>Foto Bukti Transfer dengan Kamera</Text>
+                  <Text style={styles.dashedBoxSub}>Jepret struk ATM atau upload gambar m-banking</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* Section 4: Catatan (Opsional) */}
           <Text style={styles.sectionTitle}>Catatan (Opsional)</Text>
           <View style={styles.notesCard}>
             <TextInput
@@ -192,7 +349,7 @@ const BookingScreen = ({ navigation }) => {
             />
           </View>
 
-          {/* Section 4: Ringkasan Biaya */}
+          {/* Section 5: Ringkasan Biaya */}
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Subtotal</Text>
@@ -226,6 +383,23 @@ const BookingScreen = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Modal Foto Sensor Kamera / Galeri */}
+      <PhotoPickerModal
+        visible={photoModalVisible}
+        onClose={() => setPhotoModalVisible(false)}
+        onImageSelected={handleImageSelected}
+        title={
+          photoTarget === 'shoe'
+            ? 'Foto Sepatu yang Akan Dicuci'
+            : 'Foto Bukti Pembayaran Transfer'
+        }
+        description={
+          photoTarget === 'shoe'
+            ? 'Potret kondisi fisik sepatu Anda sebelum dicuci untuk dokumentasi.'
+            : 'Potret struk transfer ATM atau tangkapan layar m-banking.'
+        }
+      />
     </View>
   );
 };
@@ -436,6 +610,185 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+  cardContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 16,
+  },
+  inputSubLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 6,
+  },
+  textInputField: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: '#111827',
+  },
+  fieldHint: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 12,
+    lineHeight: 18,
+  },
+  dashedPhotoBox: {
+    borderWidth: 1.5,
+    borderColor: '#86EFAC',
+    borderStyle: 'dashed',
+    borderRadius: 16,
+    backgroundColor: '#F0FDF4',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cameraIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  dashedBoxTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#132A1B',
+    marginBottom: 4,
+  },
+  dashedBoxSub: {
+    fontSize: 12,
+    color: '#4B5563',
+  },
+  photoPreviewWrapper: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  photoPreviewImg: {
+    width: '100%',
+    height: 180,
+  },
+  proofPreviewImg: {
+    width: '100%',
+    height: 160,
+    backgroundColor: '#F3F4F6',
+  },
+  photoActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  attachedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#DCFCE7',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  attachedBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  photoBtnGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  retakeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EAF5EC',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  retakeBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#236B38',
+  },
+  deletePhotoBtn: {
+    backgroundColor: '#FEE2E2',
+    padding: 6,
+    borderRadius: 12,
+  },
+  bankTransferSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 16,
+    marginTop: 12,
+  },
+  bankHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  bankBadge: {
+    backgroundColor: '#1E40AF',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+  },
+  bankBadgeText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 14,
+    letterSpacing: 0.5,
+  },
+  bankTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  bankNumber: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#236B38',
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  bankOwner: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 1,
+  },
+  bankDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginVertical: 14,
+  },
+  proofSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  proofSectionDesc: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 12,
+    lineHeight: 18,
   },
 });
 

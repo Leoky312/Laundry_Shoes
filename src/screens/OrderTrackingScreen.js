@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/colors';
 import api from '../services/api';
+import ErrorState from '../components/ErrorState';
+import PhotoPickerModal from '../components/PhotoPickerModal';
 
 const TRACKING_STEPS = [
   { key: 'MENUNGGU', label: 'Pesanan Diterima' },
@@ -31,16 +33,42 @@ const OrderTrackingScreen = ({ route, navigation }) => {
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
 
-  useEffect(() => {
-    fetchOrderDetails();
-  }, [orderId, orderNumber]);
+  // Upload proof modal states
+  const [uploadModalVisible, setUploadModalVisible] = useState(false);
+  const [uploadingProof, setUploadingProof] = useState(false);
 
-  const fetchOrderDetails = async () => {
+  const handleUploadPaymentProof = async (uri) => {
+    try {
+      setUploadingProof(true);
+      const res = await api.post(`/orders/${order?.id}/payment-proof`, { proofUrl: uri });
+      if (res?.data) {
+        setOrder(res.data);
+      }
+      if (Platform.OS === 'web') {
+        window.alert('Bukti pembayaran berhasil diunggah!');
+      } else {
+        Alert.alert('Sukses', 'Bukti pembayaran berhasil diunggah!');
+      }
+    } catch (err) {
+      const msg = err.message || 'Gagal mengunggah bukti pembayaran.';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Gagal Upload', msg);
+      }
+    } finally {
+      setUploadingProof(false);
+    }
+  };
+
+  const fetchOrderDetails = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       let res;
       if (orderId) {
         res = await api.get(`/orders/${orderId}`);
@@ -49,14 +77,21 @@ const OrderTrackingScreen = ({ route, navigation }) => {
       }
       if (res?.data) {
         setOrder(res.data);
+      } else {
+        setError('Data pelacakan pesanan tidak ditemukan.');
       }
     } catch (err) {
       console.log('Error fetching order details:', err.message);
+      setError(err.message || 'Gagal memuat status pelacakan pesanan.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [orderId, orderNumber]);
+
+  useEffect(() => {
+    fetchOrderDetails();
+  }, [fetchOrderDetails]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -128,6 +163,25 @@ const OrderTrackingScreen = ({ route, navigation }) => {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#236B38" />
+      </View>
+    );
+  }
+
+  if (error || !order) {
+    return (
+      <View style={[styles.screen, styles.centerContainer, { paddingHorizontal: 24 }]}>
+        <ErrorState
+          title="Pelacakan Tidak Ditemukan"
+          message={error || 'Informasi pesanan tidak ditemukan.'}
+          onRetry={fetchOrderDetails}
+          retryText="Coba Lagi"
+        />
+        <TouchableOpacity
+          style={{ marginTop: 12, paddingVertical: 8, paddingHorizontal: 16 }}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={{ color: '#236B38', fontWeight: '600', fontSize: 14 }}>Kembali</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -240,7 +294,7 @@ const OrderTrackingScreen = ({ route, navigation }) => {
                     </Text>
                     {isCurrent && (
                       <Text style={styles.stepDate}>
-                        {new Date(order?.updatedAt || Date.now()).toLocaleDateString('id-ID', {
+                        {new Date(order?.updatedAt || order?.createdAt || '2025-01-01').toLocaleDateString('id-ID', {
                           day: 'numeric',
                           month: 'short',
                           hour: '2-digit',
@@ -293,6 +347,86 @@ const OrderTrackingScreen = ({ route, navigation }) => {
             <Text style={styles.orderDetailQty}>x{firstItem?.quantity || 1}</Text>
           </View>
 
+          {/* Section: Dokumentasi Foto Sepatu (Kamera) */}
+          {(order?.shoePhoto || order?.galleries?.[0]?.imageUrl) && (
+            <>
+              <Text style={styles.sectionTitle}>Foto Sepatu (Dokumentasi)</Text>
+              <View style={styles.photoCard}>
+                <Image
+                  source={{ uri: order?.shoePhoto || order?.galleries?.[0]?.imageUrl }}
+                  style={styles.shoePhotoImg}
+                  resizeMode="cover"
+                />
+                <View style={styles.photoBadgeRow}>
+                  <Ionicons name="camera" size={14} color="#236B38" />
+                  <Text style={styles.photoBadgeText}>Kondisi Sepatu Sebelum Dicuci</Text>
+                </View>
+              </View>
+            </>
+          )}
+
+          {/* Section: Bukti Pembayaran Transfer Bank */}
+          {order?.payment?.paymentMethod === 'TRANSFER_BANK' && (
+            <>
+              <Text style={styles.sectionTitle}>Bukti Pembayaran Transfer</Text>
+              <View style={styles.transferCard}>
+                {order?.payment?.paymentProof ? (
+                  <View>
+                    <Image
+                      source={{ uri: order.payment.paymentProof }}
+                      style={styles.proofImg}
+                      resizeMode="contain"
+                    />
+                    <View style={styles.proofStatusRow}>
+                      <View style={styles.proofBadge}>
+                        <Ionicons name="checkmark-circle" size={14} color="#16A34A" />
+                        <Text style={styles.proofBadgeText}>
+                          {order?.payment?.paymentStatus === 'SUDAH_DIBAYAR'
+                            ? 'Pembayaran Terverifikasi'
+                            : 'Menunggu Verifikasi Admin'}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.reuploadBtn}
+                        onPress={() => setUploadModalVisible(true)}
+                        disabled={uploadingProof}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="camera-outline" size={14} color="#236B38" />
+                        <Text style={styles.reuploadBtnText}>Foto Ulang</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.uploadPromptBox}>
+                    <View style={styles.bankInfoMini}>
+                      <Text style={styles.bankNameMini}>Bank BCA: 816-092-8812</Text>
+                      <Text style={styles.bankOwnerMini}>a/n ShoeFresh Laundry</Text>
+                    </View>
+                    <Text style={styles.uploadPromptDesc}>
+                      Anda belum mengunggah bukti pembayaran. Gunakan kamera HP Anda untuk memotret struk transfer sekarang.
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.cameraActionBtn}
+                      onPress={() => setUploadModalVisible(true)}
+                      disabled={uploadingProof}
+                      activeOpacity={0.85}
+                    >
+                      {uploadingProof ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <>
+                          <Ionicons name="camera" size={18} color="#FFFFFF" />
+                          <Text style={styles.cameraActionBtnText}>Foto Bukti Transfer Sekarang</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            </>
+          )}
+
           {/* Batalkan Pesanan (if MENUNGGU or DIPROSES) */}
           {(order?.status === 'MENUNGGU' || order?.status === 'DIPROSES') && (
             <TouchableOpacity
@@ -313,6 +447,15 @@ const OrderTrackingScreen = ({ route, navigation }) => {
           )}
         </View>
       </ScrollView>
+
+      {/* Modal Foto Sensor Kamera / Galeri */}
+      <PhotoPickerModal
+        visible={uploadModalVisible}
+        onClose={() => setUploadModalVisible(false)}
+        onImageSelected={handleUploadPaymentProof}
+        title="Foto Bukti Pembayaran Transfer"
+        description="Gunakan kamera HP untuk memotret struk transfer atau pilih dari galeri."
+      />
     </View>
   );
 };
@@ -538,6 +681,125 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#DC2626',
+  },
+  photoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  shoePhotoImg: {
+    width: '100%',
+    height: 180,
+    backgroundColor: '#F3F4F6',
+  },
+  photoBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    padding: 12,
+    backgroundColor: '#F9FAFB',
+  },
+  photoBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#236B38',
+  },
+  transferCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  proofImg: {
+    width: '100%',
+    height: 170,
+    backgroundColor: '#F3F4F6',
+  },
+  proofStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  proofBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#DCFCE7',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  proofBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  reuploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EAF5EC',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  reuploadBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#236B38',
+  },
+  uploadPromptBox: {
+    padding: 16,
+    backgroundColor: '#FFFBEB',
+  },
+  bankInfoMini: {
+    backgroundColor: '#FEF3C7',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  bankNameMini: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#92400E',
+  },
+  bankOwnerMini: {
+    fontSize: 11,
+    color: '#B45309',
+    marginTop: 1,
+  },
+  uploadPromptDesc: {
+    fontSize: 12,
+    color: '#78350F',
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  cameraActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#D97706',
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 24,
+    shadowColor: '#D97706',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cameraActionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
   },
 });
 

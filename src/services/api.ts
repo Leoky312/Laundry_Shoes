@@ -2,6 +2,7 @@ import axios from 'axios';
 import Storage from './storage';
 import { Platform, NativeModules } from 'react-native';
 import mockApi from './mockApi';
+import parseApiError from './apiError';
 
 /**
  * Atur ke true jika ingin selalu menggunakan Mock JSON tanpa menyalakan server backend.
@@ -21,7 +22,7 @@ const getDevServerHost = () => {
         return hostname;
       }
     }
-  } catch (e) {
+  } catch (_e) {
     // ignore
   }
   return 'localhost';
@@ -56,13 +57,13 @@ axiosInstance.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(parseApiError(error))
 );
 
 axiosInstance.interceptors.response.use(
   (response) => response.data,
   async (error) => {
-    return Promise.reject(error);
+    return Promise.reject(parseApiError(error));
   }
 );
 
@@ -111,7 +112,13 @@ const handleMockFallback = async (method: string, url: string, data?: any, param
   }
   if (cleanUrl.startsWith('orders/') && cleanUrl.endsWith('/payment-proof') && method === 'POST') {
     const id = cleanUrl.split('/')[1];
-    return await mockApi.uploadPaymentProof(id);
+    let proofUrl = data?.proofUrl || data?.uri;
+    if (!proofUrl && data && typeof data.get === 'function') {
+      const field = data.get('paymentProof') || data.get('image');
+      if (typeof field === 'string') proofUrl = field;
+      else if (field && field.uri) proofUrl = field.uri;
+    }
+    return await mockApi.uploadPaymentProof(id, proofUrl);
   }
   if (cleanUrl.startsWith('orders/') && method === 'GET') {
     const id = cleanUrl.split('/')[1];
@@ -150,46 +157,112 @@ const handleMockFallback = async (method: string, url: string, data?: any, param
 export const api = {
   async get(url: string, config?: any) {
     if (USE_FORCE_MOCK) {
-      return await handleMockFallback('GET', url, null, config?.params);
+      try {
+        const res = await handleMockFallback('GET', url, null, config?.params);
+        if (url.includes('services') && res?.data) {
+          Storage.setItem('@cache_services', JSON.stringify(res.data)).catch(() => {});
+        }
+        return res;
+      } catch (err: any) {
+        if (url.includes('services')) {
+          const cached = await Storage.getItem('@cache_services');
+          if (cached) {
+            return { success: true, fromCache: true, data: JSON.parse(cached) };
+          }
+        }
+        throw parseApiError(err);
+      }
     }
     try {
-      return await axiosInstance.get(url, config);
+      const res = await axiosInstance.get(url, config);
+      if (url.includes('services') && res?.data) {
+        Storage.setItem('@cache_services', JSON.stringify(res.data)).catch(() => {});
+      }
+      return res;
     } catch (error: any) {
-      // Fallback jika backend mati / tidak terhubung
-      return await handleMockFallback('GET', url, null, config?.params);
+      // If server responded with an error (4xx/5xx), do not fallback to mock
+      if (error?.response) {
+        throw parseApiError(error);
+      }
+      // If network is offline or server unreachable, fallback to mock/cache
+      try {
+        const mockRes = await handleMockFallback('GET', url, null, config?.params);
+        return mockRes;
+      } catch (_fallbackError) {
+        if (url.includes('services')) {
+          const cached = await Storage.getItem('@cache_services');
+          if (cached) {
+            return { success: true, fromCache: true, data: JSON.parse(cached) };
+          }
+        }
+        throw parseApiError(error);
+      }
     }
   },
 
   async post(url: string, data?: any, config?: any) {
     if (USE_FORCE_MOCK) {
-      return await handleMockFallback('POST', url, data, config?.params);
+      try {
+        return await handleMockFallback('POST', url, data, config?.params);
+      } catch (err) {
+        throw parseApiError(err);
+      }
     }
     try {
       return await axiosInstance.post(url, data, config);
     } catch (error: any) {
-      return await handleMockFallback('POST', url, data, config?.params);
+      if (error?.response) {
+        throw parseApiError(error);
+      }
+      try {
+        return await handleMockFallback('POST', url, data, config?.params);
+      } catch (_fallbackError) {
+        throw parseApiError(error);
+      }
     }
   },
 
   async put(url: string, data?: any, config?: any) {
     if (USE_FORCE_MOCK) {
-      return await handleMockFallback('PUT', url, data, config?.params);
+      try {
+        return await handleMockFallback('PUT', url, data, config?.params);
+      } catch (err) {
+        throw parseApiError(err);
+      }
     }
     try {
       return await axiosInstance.put(url, data, config);
     } catch (error: any) {
-      return await handleMockFallback('PUT', url, data, config?.params);
+      if (error?.response) {
+        throw parseApiError(error);
+      }
+      try {
+        return await handleMockFallback('PUT', url, data, config?.params);
+      } catch (_fallbackError) {
+        throw parseApiError(error);
+      }
     }
   },
 
   async delete(url: string, config?: any) {
     if (USE_FORCE_MOCK) {
-      return await handleMockFallback('DELETE', url, null, config?.params);
+      try {
+        return await handleMockFallback('DELETE', url, null, config?.params);
+      } catch (err) {
+        throw parseApiError(err);
+      }
     }
     try {
       return await axiosInstance.delete(url, config);
     } catch (error: any) {
-      return await handleMockFallback('DELETE', url, null, config?.params);
+      if (error?.response) {
+        throw parseApiError(error);
+      }
+      try {
+        return await handleMockFallback('DELETE', url, null, config?.params);
+      } catch (_fallbackError) {
+        throw parseApiError(error);
+      }
     }
   },
 };

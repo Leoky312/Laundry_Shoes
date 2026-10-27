@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import Storage from '../services/storage';
 import api from '../services/api';
+import { onAuthError } from '../services/apiError';
 
 export interface User {
   id: number;
@@ -33,6 +34,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     loadStoredSession();
+
+    const unsubscribe = onAuthError(async () => {
+      console.warn('Sesi login kedaluwarsa (401). Menghapus sesi...');
+      await Storage.removeItem('@auth_token');
+      await Storage.removeItem('@auth_user');
+      setToken(null);
+      setUser(null);
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const loadStoredSession = async () => {
