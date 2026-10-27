@@ -108,8 +108,14 @@ const ProfileScreen = ({ navigation }) => {
     },
     {
       icon: 'receipt-outline',
-      title: 'Riwayat Pesanan',
-      onPress: () => navigation.navigate('HistoryTab'),
+      title: user?.role === 'ADMIN' ? 'Kelola Semua Pesanan' : 'Riwayat Pesanan',
+      onPress: () => {
+        if (user?.role === 'ADMIN') {
+          navigation.navigate('ManageOrders');
+        } else {
+          navigation.navigate('HistoryTab');
+        }
+      },
     },
     {
       icon: 'help-circle-outline',
@@ -135,6 +141,14 @@ const ProfileScreen = ({ navigation }) => {
     },
   ];
 
+  const handleBack = () => {
+    if (user?.role === 'ADMIN') {
+      navigation.navigate('Dashboard');
+    } else if (navigation && navigation.goBack) {
+      navigation.goBack();
+    }
+  };
+
   return (
     <View style={styles.screen}>
       <ScrollView
@@ -146,7 +160,7 @@ const ProfileScreen = ({ navigation }) => {
           <View style={styles.topHeader}>
             <TouchableOpacity
               style={styles.backBtn}
-              onPress={() => navigation.goBack()}
+              onPress={handleBack}
               activeOpacity={0.8}
             >
               <Ionicons name="arrow-back" size={22} color="#132A1B" />

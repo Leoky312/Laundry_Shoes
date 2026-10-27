@@ -61,13 +61,8 @@ const ManageOrdersScreen = ({ route, navigation }) => {
     }
   }, [route?.params?.initialFilter]);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [selectedFilter]);
-
   const fetchOrders = async () => {
     try {
-      setLoading(true);
       const url =
         selectedFilter === 'SEMUA'
           ? '/admin/orders'
@@ -83,6 +78,10 @@ const ManageOrdersScreen = ({ route, navigation }) => {
       setRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    fetchOrders();
+  }, [selectedFilter]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -190,7 +189,7 @@ const ManageOrdersScreen = ({ route, navigation }) => {
 
         formData.append('image', {
           uri: photo.uri,
-          name: `result_${Date.now()}.${fileType}`,
+          name: photo.fileName || `result_${orderId || 'finish'}.${fileType}`,
           type: `image/${fileType}`,
         });
         formData.append('type', 'SESUDAH');
@@ -316,7 +315,7 @@ const ManageOrdersScreen = ({ route, navigation }) => {
             <View style={styles.notesRow}>
               <Ionicons name="chatbox-ellipses-outline" size={13} color="#6B7280" />
               <Text style={styles.notesText} numberOfLines={2}>
-                "{item.notes}"
+                &ldquo;{item.notes}&rdquo;
               </Text>
             </View>
           )}

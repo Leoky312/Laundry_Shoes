@@ -3,7 +3,7 @@ import { Stack } from 'expo-router';
 
 export default function AdminLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack id="adminStack" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
     </Stack>
   );

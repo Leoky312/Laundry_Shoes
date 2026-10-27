@@ -67,7 +67,6 @@ const OrderTrackingScreen = ({ route, navigation }) => {
 
   const fetchOrderDetails = useCallback(async () => {
     try {
-      setLoading(true);
       setError(null);
       let res;
       if (orderId) {
@@ -94,6 +93,7 @@ const OrderTrackingScreen = ({ route, navigation }) => {
   }, [fetchOrderDetails]);
 
   const onRefresh = () => {
+    setLoading(true);
     setRefreshing(true);
     fetchOrderDetails();
   };

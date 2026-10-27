@@ -1,11 +1,36 @@
 import initialUsers from '../data/users.json';
 import initialServices from '../data/services.json';
 import initialOrders from '../data/orders.json';
+import Storage from './storage';
 
-// In-Memory state for mock session
+// In-Memory state for mock session with local AsyncStorage persistence
 let mockUsers = [...initialUsers];
 let mockServices = [...initialServices];
 let mockOrders = [...initialOrders];
+
+let isOrdersLoadedFromStorage = false;
+
+const loadOrdersFromStorage = async () => {
+  if (isOrdersLoadedFromStorage) return;
+  try {
+    const saved = await Storage.getItem('@mock_orders');
+    if (saved) {
+      mockOrders = JSON.parse(saved);
+    }
+  } catch (_e) {
+    // fallback
+  } finally {
+    isOrdersLoadedFromStorage = true;
+  }
+};
+
+const saveOrdersToStorage = async () => {
+  try {
+    await Storage.setItem('@mock_orders', JSON.stringify(mockOrders));
+  } catch (_e) {
+    // fallback
+  }
+};
 
 const base64UrlEncode = (str: string): string => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
@@ -47,12 +72,12 @@ const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const mockApi = {
   // 1. SERVICES
-  async getServices() {
+  async getServices(includeAll = false) {
     await delay();
     return {
       success: true,
       message: 'Daftar layanan berhasil diambil (Mock).',
-      data: mockServices.filter((s) => s.isActive !== false),
+      data: includeAll ? [...mockServices] : mockServices.filter((s) => s.isActive !== false),
     };
   },
 
@@ -61,6 +86,44 @@ export const mockApi = {
     const service = mockServices.find((s) => String(s.id) === String(id));
     if (!service) throw new Error('Layanan tidak ditemukan.');
     return { success: true, data: service };
+  },
+
+  async createService(data: any) {
+    await delay();
+    const newService = {
+      id: Date.now(),
+      name: data.name,
+      description: data.description || '',
+      duration: data.duration || '1 - 2 Hari',
+      price: String(data.price || 0),
+      image: data.image || 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop&q=80',
+      isActive: data.isActive ?? true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    mockServices.push(newService);
+    return { success: true, message: 'Layanan baru berhasil ditambahkan.', data: newService };
+  },
+
+  async updateService(id: number | string, data: any) {
+    await delay();
+    const index = mockServices.findIndex((s) => String(s.id) === String(id));
+    if (index === -1) throw new Error('Layanan tidak ditemukan.');
+    mockServices[index] = {
+      ...mockServices[index],
+      ...data,
+      price: data.price !== undefined ? String(data.price) : mockServices[index].price,
+      updatedAt: new Date().toISOString(),
+    };
+    return { success: true, message: 'Layanan berhasil diperbarui.', data: mockServices[index] };
+  },
+
+  async deleteService(id: number | string) {
+    await delay();
+    const index = mockServices.findIndex((s) => String(s.id) === String(id));
+    if (index === -1) throw new Error('Layanan tidak ditemukan.');
+    const removed = mockServices.splice(index, 1)[0];
+    return { success: true, message: 'Layanan berhasil dihapus.', data: removed };
   },
 
   // 2. AUTH
@@ -148,8 +211,20 @@ export const mockApi = {
   // 3. ORDERS
   async getMyOrders(userId?: number) {
     await delay();
-    // Default to Rian Pratama (id 9) if userId not specified
-    const targetUserId = userId || 9;
+    await loadOrdersFromStorage();
+    let targetUserId = userId;
+    if (!targetUserId) {
+      try {
+        const storedUser = await Storage.getItem('@auth_user');
+        if (storedUser) {
+          const u = JSON.parse(storedUser);
+          targetUserId = u.id;
+        }
+      } catch (_e) {
+        // fallback
+      }
+    }
+    targetUserId = targetUserId || 9;
     const orders = mockOrders.filter((o) => o.userId === targetUserId);
     orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return { success: true, data: orders };
@@ -157,6 +232,7 @@ export const mockApi = {
 
   async getOrderDetail(idOrNumber: string | number) {
     await delay();
+    await loadOrdersFromStorage();
     const order = mockOrders.find(
       (o) => String(o.id) === String(idOrNumber) || o.orderNumber === String(idOrNumber)
     );
@@ -164,8 +240,30 @@ export const mockApi = {
     return { success: true, data: order };
   },
 
-  async createOrder(orderPayload: any, userId = 9) {
+  async createOrder(orderPayload: any, userId?: number) {
     await delay();
+    await loadOrdersFromStorage();
+    let targetUserId = userId;
+    if (!targetUserId && orderPayload && typeof (orderPayload as any).get === 'function') {
+      const formUserId = (orderPayload as any).get('userId');
+      if (formUserId) targetUserId = Number(formUserId);
+    }
+    if (!targetUserId && orderPayload?.userId) {
+      targetUserId = Number(orderPayload.userId);
+    }
+    if (!targetUserId) {
+      try {
+        const storedUser = await Storage.getItem('@auth_user');
+        if (storedUser) {
+          const u = JSON.parse(storedUser);
+          targetUserId = u.id;
+        }
+      } catch (_e) {
+        // fallback
+      }
+    }
+    targetUserId = targetUserId || 9;
+
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -214,7 +312,7 @@ export const mockApi = {
     const newOrder = {
       id: Date.now(),
       orderNumber,
-      userId,
+      userId: targetUserId,
       pickupDate: payload.pickupDate || now.toISOString(),
       deliveryDate: null,
       status: 'MENUNGGU',
@@ -257,6 +355,7 @@ export const mockApi = {
     };
 
     mockOrders.unshift(newOrder);
+    await saveOrdersToStorage();
     return {
       success: true,
       message: 'Pesanan berhasil dibuat (Mock API).',
@@ -266,6 +365,7 @@ export const mockApi = {
 
   async cancelOrder(orderId: number | string) {
     await delay();
+    await loadOrdersFromStorage();
     const order = mockOrders.find((o) => String(o.id) === String(orderId));
     if (!order) throw new Error('Pesanan tidak ditemukan.');
     order.status = 'DIBATALKAN';
@@ -276,11 +376,13 @@ export const mockApi = {
       updatedBy: 'Customer',
       createdAt: new Date().toISOString(),
     });
+    await saveOrdersToStorage();
     return { success: true, message: 'Pesanan berhasil dibatalkan.', data: order };
   },
 
   async uploadPaymentProof(orderId: number | string, proofUrl = 'https://images.unsplash.com/photo-1554415707-9e49017aed81?w=500&auto=format&fit=crop') {
     await delay();
+    await loadOrdersFromStorage();
     const order = mockOrders.find((o) => String(o.id) === String(orderId));
     if (!order) throw new Error('Pesanan tidak ditemukan.');
     if (order.payment) {
@@ -288,12 +390,14 @@ export const mockApi = {
       order.payment.paymentStatus = 'MENUNGGU_VERIFIKASI';
       order.payment.paidAt = new Date().toISOString();
     }
+    await saveOrdersToStorage();
     return { success: true, message: 'Bukti pembayaran berhasil diunggah (Mock).', data: order };
   },
 
   // 4. PUBLIC TRACKING
   async getTrackingByOrderNumber(orderNumber: string) {
     await delay();
+    await loadOrdersFromStorage();
     const order = mockOrders.find((o) => o.orderNumber === orderNumber);
     if (!order) throw new Error('Nomor resi pesanan tidak ditemukan.');
     return { success: true, data: order };
@@ -302,6 +406,7 @@ export const mockApi = {
   // 5. ADMIN
   async getAdminDashboard() {
     await delay();
+    await loadOrdersFromStorage();
     const totalOrders = mockOrders.length;
     const pendingOrders = mockOrders.filter((o) => o.status === 'MENUNGGU').length;
     const inProcessOrders = mockOrders.filter((o) =>
@@ -341,6 +446,7 @@ export const mockApi = {
 
   async getAdminOrders(status?: string, search?: string) {
     await delay();
+    await loadOrdersFromStorage();
     let orders = [...mockOrders];
     if (status && status !== 'ALL') {
       orders = orders.filter((o) => o.status === status);
@@ -359,6 +465,7 @@ export const mockApi = {
 
   async updateOrderStatus(orderId: number | string, newStatus: string, description?: string) {
     await delay();
+    await loadOrdersFromStorage();
     const order = mockOrders.find((o) => String(o.id) === String(orderId));
     if (!order) throw new Error('Pesanan tidak ditemukan.');
     order.status = newStatus;
@@ -369,24 +476,76 @@ export const mockApi = {
       updatedBy: 'Admin Shoes',
       createdAt: new Date().toISOString(),
     });
+    await saveOrdersToStorage();
     return { success: true, message: `Status order diperbarui ke ${newStatus}.`, data: order };
+  },
+
+  async deleteAdminOrder(orderId: number | string) {
+    await delay();
+    await loadOrdersFromStorage();
+    const index = mockOrders.findIndex((o) => String(o.id) === String(orderId));
+    if (index === -1) throw new Error('Pesanan tidak ditemukan.');
+    const removed = mockOrders.splice(index, 1)[0];
+    await saveOrdersToStorage();
+    return { success: true, message: 'Pesanan berhasil dihapus permanen.', data: removed };
   },
 
   async getReports() {
     await delay();
+    await loadOrdersFromStorage();
     let totalRevenue = 0;
+    let totalPaidOrders = 0;
     const statusCounts: Record<string, number> = {};
+    const serviceBreakdownMap: Record<string, { serviceName: string; totalQuantity: number; totalRevenue: number }> = {};
+    const transactions: any[] = [];
 
     mockOrders.forEach((o) => {
       statusCounts[o.status] = (statusCounts[o.status] || 0) + 1;
-      if (o.payment && o.payment.paymentStatus === 'SUDAH_DIBAYAR') {
-        totalRevenue += parseFloat(String(o.payment.amount || o.totalAmount));
+      const isPaid =
+        (o.payment && (o.payment.paymentStatus === 'SUDAH_DIBAYAR' || o.payment.paidAt)) ||
+        o.status === 'SELESAI';
+      const amount = parseFloat(String(o.payment?.amount || o.totalAmount || 0));
+
+      if (isPaid) {
+        totalRevenue += amount;
+        totalPaidOrders += 1;
+
+        transactions.push({
+          orderNumber: o.orderNumber,
+          totalAmount: amount,
+          date: o.payment?.paidAt || o.createdAt,
+          paymentMethod: o.payment?.paymentMethod || 'QRIS',
+        });
+
+        (o.orderItems || []).forEach((item: any) => {
+          const sName = item.service?.name || 'Laundry Sepatu';
+          const qty = Number(item.quantity) || 1;
+          const rev = (Number(item.price) || 0) * qty;
+          if (!serviceBreakdownMap[sName]) {
+            serviceBreakdownMap[sName] = {
+              serviceName: sName,
+              totalQuantity: 0,
+              totalRevenue: 0,
+            };
+          }
+          serviceBreakdownMap[sName].totalQuantity += qty;
+          serviceBreakdownMap[sName].totalRevenue += rev;
+        });
       }
     });
+
+    const serviceBreakdown = Object.values(serviceBreakdownMap).sort((a, b) => b.totalRevenue - a.totalRevenue);
+    transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return {
       success: true,
       data: {
+        summary: {
+          totalIncome: totalRevenue,
+          totalPaidOrders,
+        },
+        serviceBreakdown,
+        transactions,
         totalOrders: mockOrders.length,
         totalRevenue,
         statusCounts,

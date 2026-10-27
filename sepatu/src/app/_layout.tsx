@@ -59,7 +59,7 @@ export default function RootLayout() {
             <AuthGate>
               <StatusBar style="dark" />
               <OfflineBanner />
-              <Stack screenOptions={{ headerShown: false }}>
+              <Stack id="root" screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="index" />
                 <Stack.Screen name="(auth)" />
                 <Stack.Screen name="(customer)" />

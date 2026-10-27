@@ -19,13 +19,8 @@ const ReportScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchReport();
-  }, []);
-
   const fetchReport = async () => {
     try {
-      setLoading(true);
       const res = await api.get('/admin/reports');
       if (res.data) {
         setReport(res.data);
@@ -38,7 +33,12 @@ const ReportScreen = () => {
     }
   };
 
+  useEffect(() => {
+    fetchReport();
+  }, []);
+
   const onRefresh = () => {
+    setLoading(true);
     setRefreshing(true);
     fetchReport();
   };

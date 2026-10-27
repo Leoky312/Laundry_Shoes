@@ -88,6 +88,9 @@ const BookingScreen = ({ navigation }) => {
       formData.append('notes', notes);
       formData.append('shoeBrand', shoeBrand || 'Sneakers');
       formData.append('pickupDate', new Date(Date.now() + 86400000).toISOString());
+      if (user?.id) {
+        formData.append('userId', String(user.id));
+      }
 
       if (shoePhoto) {
         formData.append('shoePhoto', shoePhoto);
