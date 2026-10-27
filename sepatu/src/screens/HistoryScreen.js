@@ -16,6 +16,7 @@ import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/colors';
 import api from '../services/api';
+import ErrorState from '../components/ErrorState';
 
 const FILTER_TABS = ['Semua', 'Diproses', 'Selesai', 'Dibatalkan'];
 
@@ -26,18 +27,21 @@ const HistoryScreen = ({ navigation }) => {
   const [orders, setOrders] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState('Semua');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [cancellingId, setCancellingId] = useState(null);
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await api.get('/orders/my-orders');
-      if (res.data) {
+      if (res?.data) {
         setOrders(res.data);
       }
     } catch (err) {
       console.log('Error fetching order history:', err.message);
+      setError(err.message || 'Gagal memuat riwayat pesanan.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -273,6 +277,13 @@ const HistoryScreen = ({ navigation }) => {
         {/* Orders List */}
         {loading && !refreshing ? (
           <ActivityIndicator size="large" color="#236B38" style={{ marginTop: 40 }} />
+        ) : error && orders.length === 0 ? (
+          <ErrorState
+            title="Gagal Memuat Riwayat"
+            message={error}
+            onRetry={fetchOrders}
+            retryText="Coba Lagi"
+          />
         ) : (
           <FlatList
             data={filteredOrders}

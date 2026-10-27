@@ -17,12 +17,14 @@ import Card from '../components/Card';
 import Colors from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 import api, { getImageUrl } from '../services/api';
+import ErrorState from '../components/ErrorState';
 
 const AdminDashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -32,13 +34,15 @@ const AdminDashboardScreen = ({ navigation }) => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await api.get('/admin/dashboard');
-      if (res.data) {
+      if (res?.data) {
         setStats(res.data.stats);
         setRecentOrders(res.data.recentOrders || []);
       }
     } catch (err) {
       console.log('Error dashboard data:', err.message);
+      setError(err.message || 'Gagal memuat ringkasan data admin.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -100,15 +104,26 @@ const AdminDashboardScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Revenue Highlight Card */}
-      <View style={styles.revenueCard}>
-        <View style={styles.revenueDecorCircle1} />
-        <View style={styles.revenueDecorCircle2} />
+      {loading && !refreshing ? (
+        <ActivityIndicator size="large" color={Colors.primary} style={{ marginVertical: 40 }} />
+      ) : error && !stats ? (
+        <ErrorState
+          title="Gagal Memuat Dashboard"
+          message={error}
+          onRetry={fetchDashboardData}
+          retryText="Muat Ulang"
+        />
+      ) : (
+        <>
+          {/* Revenue Highlight Card */}
+          <View style={styles.revenueCard}>
+            <View style={styles.revenueDecorCircle1} />
+            <View style={styles.revenueDecorCircle2} />
 
-        <View style={styles.revenueHeaderRow}>
-          <View style={styles.revenueBadge}>
-            <Ionicons name="wallet-outline" size={14} color="#D8F3DC" />
-            <Text style={styles.revenueBadgeText}>TOTAL OMSET BERSIH</Text>
+            <View style={styles.revenueHeaderRow}>
+              <View style={styles.revenueBadge}>
+                <Ionicons name="wallet-outline" size={14} color="#D8F3DC" />
+                <Text style={styles.revenueBadgeText}>TOTAL OMSET BERSIH</Text>
           </View>
           <TouchableOpacity
             style={styles.revenueActionBtn}
@@ -338,6 +353,8 @@ const AdminDashboardScreen = ({ navigation }) => {
             </TouchableOpacity>
           );
         })
+      )}
+        </>
       )}
 
       <View style={{ height: 40 }} />
