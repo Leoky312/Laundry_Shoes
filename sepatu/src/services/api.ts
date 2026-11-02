@@ -73,45 +73,68 @@ axiosInstance.interceptors.response.use(
  */
 const handleMockFallback = async (method: string, url: string, data?: any, params?: any): Promise<any> => {
   const cleanUrl = url.replace(/^\/api/, '').replace(/^\//, '');
+  const [cleanPath, rawQuery] = cleanUrl.split('?');
 
-  console.log(`[Mock REST API] Fallback triggered: ${method.toUpperCase()} /${cleanUrl}`);
+  const queryParams: Record<string, string> = { ...(params || {}) };
+  if (rawQuery) {
+    rawQuery.split('&').forEach((pair) => {
+      const [k, v] = pair.split('=');
+      if (k) queryParams[decodeURIComponent(k)] = decodeURIComponent(v || '');
+    });
+  }
+
+  console.log(`[Mock REST API] Fallback triggered: ${method.toUpperCase()} /${cleanPath}`);
 
   // 1. Services
-  if (cleanUrl === 'services' && method === 'GET') {
-    return await mockApi.getServices();
+  if (cleanPath === 'services' && method === 'GET') {
+    return await mockApi.getServices(queryParams.all === 'true');
   }
-  if (cleanUrl.startsWith('services/') && method === 'GET') {
-    const id = cleanUrl.split('/')[1];
+  if (cleanPath === 'services' && method === 'POST') {
+    return await mockApi.createService(data);
+  }
+  if (cleanPath.startsWith('services/') && method === 'GET') {
+    const id = cleanPath.split('/')[1];
     return await mockApi.getServiceDetail(id);
+  }
+  if (cleanPath.startsWith('services/') && (method === 'PUT' || method === 'PATCH')) {
+    const id = cleanPath.split('/')[1];
+    return await mockApi.updateService(id, data);
+  }
+  if (cleanPath.startsWith('services/') && method === 'DELETE') {
+    const id = cleanPath.split('/')[1];
+    return await mockApi.deleteService(id);
   }
 
   // 2. Auth
-  if (cleanUrl === 'auth/login' && method === 'POST') {
+  if (cleanPath === 'auth/login' && method === 'POST') {
     return await mockApi.login(data?.email, data?.password);
   }
-  if (cleanUrl === 'auth/register' && method === 'POST') {
+  if (cleanPath === 'auth/register' && method === 'POST') {
     return await mockApi.register(data);
   }
-  if (cleanUrl === 'auth/me' && method === 'GET') {
+  if (cleanPath === 'auth/me' && method === 'GET') {
     return await mockApi.getMe();
   }
-  if (cleanUrl === 'auth/logout' && method === 'POST') {
+  if (cleanPath === 'auth/logout' && method === 'POST') {
     return await mockApi.logout();
   }
 
   // 3. Orders
-  if (cleanUrl === 'orders/my-orders' && method === 'GET') {
+  if (cleanPath === 'orders/my-orders' && method === 'GET') {
     return await mockApi.getMyOrders();
   }
-  if (cleanUrl === 'orders' && method === 'POST') {
+  if (cleanPath === 'orders' && method === 'POST') {
     return await mockApi.createOrder(data);
   }
-  if (cleanUrl.startsWith('orders/') && cleanUrl.endsWith('/cancel') && method === 'POST') {
-    const id = cleanUrl.split('/')[1];
+  if (
+    (cleanPath.startsWith('orders/') && cleanPath.endsWith('/cancel') && method === 'POST') ||
+    (cleanPath.startsWith('orders/') && method === 'DELETE')
+  ) {
+    const id = cleanPath.split('/')[1];
     return await mockApi.cancelOrder(id);
   }
-  if (cleanUrl.startsWith('orders/') && cleanUrl.endsWith('/payment-proof') && method === 'POST') {
-    const id = cleanUrl.split('/')[1];
+  if (cleanPath.startsWith('orders/') && cleanPath.endsWith('/payment-proof') && method === 'POST') {
+    const id = cleanPath.split('/')[1];
     let proofUrl = data?.proofUrl || data?.uri;
     if (!proofUrl && data && typeof data.get === 'function') {
       const field = data.get('paymentProof') || data.get('image');
@@ -120,29 +143,37 @@ const handleMockFallback = async (method: string, url: string, data?: any, param
     }
     return await mockApi.uploadPaymentProof(id, proofUrl);
   }
-  if (cleanUrl.startsWith('orders/') && method === 'GET') {
-    const id = cleanUrl.split('/')[1];
+  if (cleanPath.startsWith('orders/') && method === 'GET') {
+    const id = cleanPath.split('/')[1];
     return await mockApi.getOrderDetail(id);
   }
 
   // 4. Tracking
-  if (cleanUrl.startsWith('tracking/') && method === 'GET') {
-    const orderNumber = cleanUrl.split('/')[1];
+  if (cleanPath.startsWith('tracking/') && method === 'GET') {
+    const orderNumber = cleanPath.split('/')[1];
     return await mockApi.getTrackingByOrderNumber(orderNumber);
   }
 
   // 5. Admin
-  if (cleanUrl === 'admin/dashboard' && method === 'GET') {
+  if (cleanPath === 'admin/dashboard' && method === 'GET') {
     return await mockApi.getAdminDashboard();
   }
-  if (cleanUrl === 'admin/orders' && method === 'GET') {
-    return await mockApi.getAdminOrders(params?.status, params?.search);
+  if (cleanPath === 'admin/orders' && method === 'GET') {
+    return await mockApi.getAdminOrders(queryParams.status, queryParams.search);
   }
-  if (cleanUrl.startsWith('admin/orders/') && cleanUrl.endsWith('/status') && method === 'PUT') {
-    const id = cleanUrl.split('/')[2];
-    return await mockApi.updateOrderStatus(id, data?.status, data?.notes);
+  if (
+    cleanPath.startsWith('admin/orders/') &&
+    cleanPath.endsWith('/status') &&
+    (method === 'PUT' || method === 'PATCH')
+  ) {
+    const id = cleanPath.split('/')[2];
+    return await mockApi.updateOrderStatus(id, data?.status, data?.notes || data?.description);
   }
-  if (cleanUrl === 'admin/reports' && method === 'GET') {
+  if (cleanPath.startsWith('admin/orders/') && method === 'DELETE') {
+    const id = cleanPath.split('/')[2];
+    return await mockApi.deleteAdminOrder(id);
+  }
+  if (cleanPath === 'admin/reports' && method === 'GET') {
     return await mockApi.getReports();
   }
 
@@ -238,6 +269,28 @@ export const api = {
       }
       try {
         return await handleMockFallback('PUT', url, data, config?.params);
+      } catch (_fallbackError) {
+        throw parseApiError(error);
+      }
+    }
+  },
+
+  async patch(url: string, data?: any, config?: any) {
+    if (USE_FORCE_MOCK) {
+      try {
+        return await handleMockFallback('PATCH', url, data, config?.params);
+      } catch (err) {
+        throw parseApiError(err);
+      }
+    }
+    try {
+      return await axiosInstance.patch(url, data, config);
+    } catch (error: any) {
+      if (error?.response) {
+        throw parseApiError(error);
+      }
+      try {
+        return await handleMockFallback('PATCH', url, data, config?.params);
       } catch (_fallbackError) {
         throw parseApiError(error);
       }
