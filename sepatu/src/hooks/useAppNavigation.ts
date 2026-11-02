@@ -67,6 +67,10 @@ export function useAppNavigation() {
       case 'Report':
         router.push('/(admin)/(tabs)/reports');
         break;
+      case 'AdminProfile':
+      case 'AdminProfileTab':
+        router.push('/(admin)/(tabs)/profile');
+        break;
       default:
         console.warn(`[useAppNavigation] Unknown route name: ${screenName}`);
         try {

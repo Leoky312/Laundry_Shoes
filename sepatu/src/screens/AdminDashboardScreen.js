@@ -119,7 +119,7 @@ const AdminDashboardScreen = ({ navigation }) => {
 
           <TouchableOpacity
             style={styles.adminAvatarBtn}
-            onPress={() => navigation.navigate('Profile')}
+            onPress={() => navigation.navigate('AdminProfile')}
             activeOpacity={0.8}
           >
             <Image
