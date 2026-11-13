@@ -6,6 +6,7 @@ import initialOrders from '../data/orders.json';
 let mockUsers = [...initialUsers];
 let mockServices = [...initialServices];
 let mockOrders = [...initialOrders];
+let currentUserId: number | null = null;
 
 const base64UrlEncode = (str: string): string => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
@@ -82,6 +83,7 @@ export const mockApi = {
     const token = generateMockJwt(user);
     const userWithoutPassword = { ...user };
     delete (userWithoutPassword as any).password;
+    currentUserId = user.id;
 
     return {
       success: true,
@@ -117,6 +119,7 @@ export const mockApi = {
     const token = generateMockJwt(newUser);
     const safeUser = { ...newUser };
     delete (safeUser as any).password;
+    currentUserId = newUser.id;
 
     return {
       success: true,
@@ -128,9 +131,20 @@ export const mockApi = {
     };
   },
 
+  setCurrentUserId(id: number | null) {
+    currentUserId = id;
+  },
+
   async getMe(userId?: number) {
     await delay();
-    const user = mockUsers.find((u) => u.id === userId) || mockUsers[1];
+    const targetId = userId ?? currentUserId;
+    if (!targetId) {
+      throw new Error('Sesi tidak ditemukan atau belum login.');
+    }
+    const user = mockUsers.find((u) => u.id === targetId);
+    if (!user) {
+      throw new Error('Pengguna tidak ditemukan.');
+    }
     const safeUser = { ...user };
     delete (safeUser as any).password;
     return { success: true, data: safeUser };
@@ -138,6 +152,7 @@ export const mockApi = {
 
   async logout() {
     await delay(100);
+    currentUserId = null;
     return {
       success: true,
       message: 'Berhasil keluar (Logout berhasil).',

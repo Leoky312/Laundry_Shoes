@@ -324,7 +324,6 @@ const ShoeCareScreen: React.FC<ShoeCareScreenProps> = ({ navigation }) => {
               </View>
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={styles.cardTitle}>Inspirasi Sepatu & Sneaker</Text>
-                <Text style={styles.cardSubtitle}>Katalog eksternal dari DummyJSON Products</Text>
               </View>
               <TouchableOpacity onPress={loadProductsData} style={{ padding: 4 }}>
                 <Ionicons name="refresh" size={18} color="#236B38" />

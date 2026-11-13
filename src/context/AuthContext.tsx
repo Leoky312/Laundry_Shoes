@@ -32,7 +32,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadStoredSession();
+    // Pada saat aplikasi pertama kali dijalankan, pastikan sesi lama dibersihkan
+    // agar pengguna selalu diarahkan ke halaman login terlebih dahulu
+    const initFreshSession = async () => {
+      try {
+        await Storage.removeItem('@auth_token');
+        await Storage.removeItem('@auth_user');
+      } catch (e) {
+        // ignore
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    initFreshSession();
   }, []);
 
   const loadStoredSession = async () => {

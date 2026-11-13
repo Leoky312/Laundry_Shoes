@@ -51,7 +51,7 @@ const PRESET_IMAGES = [
   },
 ];
 
-const ManageServicesScreen = () => {
+const ManageServicesScreen = ({ navigation }) => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

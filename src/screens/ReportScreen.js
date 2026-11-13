@@ -14,7 +14,7 @@ import logoImg from '../assets/logo.png';
 import Colors from '../constants/colors';
 import api from '../services/api';
 
-const ReportScreen = () => {
+const ReportScreen = ({ navigation }) => {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

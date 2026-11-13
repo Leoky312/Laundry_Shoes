@@ -10,17 +10,36 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter, useSegments } from 'expo-router';
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { isLoading, isAuthenticated } = useAuth();
+  const { isLoading, isAuthenticated, isAdmin } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     if (isLoading) return;
-    const inAuthGroup = segments[0] === '(auth)';
-    if (!isAuthenticated && !inAuthGroup && segments[0]) {
-      router.replace('/(auth)/login');
+    const firstSegment = (segments as string[])[0];
+    const inAuthGroup = firstSegment === '(auth)';
+    const isRoot = !firstSegment;
+
+    // 1. Pengguna belum login: tidak boleh mengakses (customer) atau (admin)
+    if (!isAuthenticated) {
+      if (!inAuthGroup && !isRoot) {
+        router.replace('/(auth)/login');
+      }
+      return;
     }
-  }, [isLoading, isAuthenticated, segments]);
+
+    // 2. Pengguna sudah login sebagai ADMIN: tidak boleh masuk ke rute customer
+    if (isAdmin && firstSegment === '(customer)') {
+      router.replace('/(admin)/(tabs)');
+      return;
+    }
+
+    // 3. Pengguna sudah login sebagai CUSTOMER: tidak boleh masuk ke rute admin
+    if (!isAdmin && firstSegment === '(admin)') {
+      router.replace('/(customer)/(tabs)');
+      return;
+    }
+  }, [isLoading, isAuthenticated, isAdmin, segments]);
 
   return <>{children}</>;
 }
@@ -55,7 +74,7 @@ export default function RootLayout() {
         <CartProvider>
           <AuthGate>
             <StatusBar style="dark" />
-            <Stack screenOptions={{ headerShown: false }}>
+            <Stack screenOptions={{ headerShown: false }} initialRouteName="index">
               <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(customer)" />

@@ -1,7 +1,9 @@
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/context/AuthContext';
 
 export function useAppNavigation() {
   const router = useRouter();
+  const { isAdmin } = useAuth();
 
   const getRouteConfig = (screenName: string, params?: Record<string, any>) => {
     switch (screenName) {
@@ -15,7 +17,10 @@ export function useAppNavigation() {
         return { pathname: '/(customer)/(tabs)/history' as const, params };
       case 'ProfileTab':
       case 'Profile':
-        return { pathname: '/(customer)/(tabs)/profile' as const, params };
+      case 'AdminProfile':
+        return isAdmin
+          ? { pathname: '/(admin)/(tabs)/profile' as const, params }
+          : { pathname: '/(customer)/(tabs)/profile' as const, params };
       case 'Cart':
         return { pathname: '/(customer)/cart' as const, params };
       case 'Booking':
@@ -51,18 +56,22 @@ export function useAppNavigation() {
 
   const navigate = (screenName: string, params?: Record<string, any>) => {
     const config = getRouteConfig(screenName, params);
+    const navFn = typeof (router as any).navigate === 'function' ? (router as any).navigate : router.push;
+
     if (config.params && Object.keys(config.params).length > 0) {
-      router.push({ pathname: config.pathname as any, params: config.params });
+      navFn({ pathname: config.pathname as any, params: config.params });
     } else {
-      router.push(config.pathname as any);
+      navFn(config.pathname as any);
     }
   };
 
   const goBack = () => {
     if (router.canGoBack()) {
       router.back();
+    } else if (isAdmin) {
+      router.replace('/(admin)/(tabs)');
     } else {
-      router.push('/(customer)/(tabs)');
+      router.replace('/(customer)/(tabs)');
     }
   };
 

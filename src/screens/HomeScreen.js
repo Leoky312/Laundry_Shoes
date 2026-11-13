@@ -271,7 +271,6 @@ const HomeScreen = ({ navigation }) => {
               <View style={[styles.sectionHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
                 <View>
                   <Text style={styles.sectionTitle}>Inspirasi Sepatu & Sneaker</Text>
-                  <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>Katalog produk eksternal dari DummyJSON Mens-Shoes</Text>
                 </View>
                 <TouchableOpacity onPress={() => navigation.navigate('ShoeCare')}>
                   <Text style={{ fontSize: 12, fontWeight: '700', color: '#236B38' }}>Lihat Semua →</Text>

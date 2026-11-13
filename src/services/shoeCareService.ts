@@ -133,15 +133,38 @@ export const shoeCareService = {
         return res.json();
       })
       .then((jsonData: any) => {
+        const indonesianGuides = [
+          {
+            title: 'Panduan Cuci Sneakers Canvas & Knit',
+            content:
+              'Gunakan sikat berbulu halus (soft brush) dan sabun khusus sepatu berbahan alami. Hindari merendam sneaker di dalam deterjen agar sol lem tidak mengelupas dan warna kain tidak kusam.',
+            category: 'cleaning' as const,
+            suitableFor: 'Sneakers Canvas & Knit',
+          },
+          {
+            title: 'Perawatan Sepatu Kulit & Leather Asli',
+            content:
+              'Bersihkan debu dan kotoran dengan kain microfiber lembap, lalu aplikasikan leather conditioner secara rutin agar tekstur kulit tetap lentur, berkilau alami, dan terhindar dari retak.',
+            category: 'protection' as const,
+            suitableFor: 'Kulit / Leather Asli',
+          },
+          {
+            title: 'Tips Khusus Bahan Suede & Nubuck',
+            content:
+              'Gunakan sikat khusus suede (crepe brush) dengan gerakan searah. Hindari kontak langsung dengan air dan gunakan semprotan waterproof repellent untuk perlindungan ekstra dari noda cairan.',
+            category: 'storage' as const,
+            suitableFor: 'Suede & Nubuck',
+          },
+        ];
+
         const guides: ShoeCareGuide[] = (jsonData.posts || []).map((post: any, index: number) => {
-          const categories: ShoeCareGuide['category'][] = ['cleaning', 'drying', 'storage', 'protection'];
-          const materials = ['Sneakers Canvas & Knit', 'Kulit / Leather Asli', 'Suede & Nubuck'];
+          const guideItem = indonesianGuides[index % indonesianGuides.length];
           return {
-            id: post.id,
-            title: `Panduan Perawatan: ${post.title.slice(0, 32)}...`,
-            content: post.body,
-            category: categories[index % categories.length],
-            suitableFor: materials[index % materials.length],
+            id: post.id || index + 1,
+            title: guideItem.title,
+            content: guideItem.content,
+            category: guideItem.category,
+            suitableFor: guideItem.suitableFor,
             likes: post.reactions?.likes || 25,
           };
         });
@@ -152,28 +175,28 @@ export const shoeCareService = {
         return [
           {
             id: 1,
-            title: 'Panduan Cuci Sneaker Canvas & Knit',
+            title: 'Panduan Cuci Sneakers Canvas & Knit',
             content:
-              'Gunakan sikat berbulu halus (soft brush) dan sabun khusus sepatu berbasis minyak alami. Jangan rendam sneaker di dalam ember deterjen.',
+              'Gunakan sikat berbulu halus (soft brush) dan sabun khusus sepatu berbahan alami. Hindari merendam sneaker di dalam deterjen agar sol lem tidak mengelupas dan warna kain tidak kusam.',
             category: 'cleaning',
-            suitableFor: 'Canvas & Knit',
+            suitableFor: 'Sneakers Canvas & Knit',
             likes: 48,
           },
           {
             id: 2,
-            title: 'Tips Pengeringan Sepatu Tanpa Yellowing',
+            title: 'Perawatan Sepatu Kulit & Leather Asli',
             content:
-              'Angin-anginkan sepatu di tempat teduh dengan sirkulasi udara baik. Hindari sinar matahari terik langsung agar sol karet tidak menguning.',
-            category: 'drying',
-            suitableFor: 'Semua Sepatu',
+              'Bersihkan debu dan kotoran dengan kain microfiber lembap, lalu aplikasikan leather conditioner secara rutin agar tekstur kulit tetap lentur, berkilau alami, dan terhindar dari retak.',
+            category: 'protection',
+            suitableFor: 'Kulit / Leather Asli',
             likes: 56,
           },
           {
             id: 3,
-            title: 'Penyimpanan dan Perawatan Bahan Suede',
+            title: 'Tips Khusus Bahan Suede & Nubuck',
             content:
-              'Gunakan spray waterproof repellent secara berkala untuk melindungi suede dari noda air hujan dan kotoran lumpur.',
-            category: 'protection',
+              'Gunakan sikat khusus suede (crepe brush) dengan gerakan searah. Hindari kontak langsung dengan air dan gunakan semprotan waterproof repellent untuk perlindungan ekstra dari noda cairan.',
+            category: 'storage',
             suitableFor: 'Suede & Nubuck',
             likes: 34,
           },

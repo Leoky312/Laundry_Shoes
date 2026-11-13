@@ -30,27 +30,15 @@ const SplashScreen = ({ navigation }) => {
     if (isLoading) return;
 
     const timer = setTimeout(() => {
-      if (!isAuthenticated) {
-        navigation?.replace ? navigation.replace('Login') : navigation?.navigate?.('Login');
-      } else if (isAdmin || user?.role === 'ADMIN') {
-        navigation?.replace ? navigation.replace('Dashboard') : navigation?.navigate?.('Dashboard');
-      } else {
-        navigation?.replace ? navigation.replace('HomeTab') : navigation?.navigate?.('HomeTab');
-      }
+      navigation?.replace ? navigation.replace('Login') : navigation?.navigate?.('Login');
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [isLoading, isAuthenticated, isAdmin, user, navigation]);
+  }, [isLoading, navigation]);
 
   const handlePress = () => {
     if (isLoading) return;
-    if (!isAuthenticated) {
-      navigation?.replace ? navigation.replace('Login') : navigation?.navigate?.('Login');
-    } else if (isAdmin || user?.role === 'ADMIN') {
-      navigation?.replace ? navigation.replace('Dashboard') : navigation?.navigate?.('Dashboard');
-    } else {
-      navigation?.replace ? navigation.replace('HomeTab') : navigation?.navigate?.('HomeTab');
-    }
+    navigation?.replace ? navigation.replace('Login') : navigation?.navigate?.('Login');
   };
 
   return (
