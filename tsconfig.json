@@ -4,6 +4,7 @@
     "strict": false,
     "allowJs": true,
     "checkJs": false,
+    "moduleResolution": "bundler",
     "paths": {
       "@/*": [
         "./src/*"

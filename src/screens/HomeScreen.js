@@ -16,6 +16,7 @@ import Colors from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import api from '../services/api';
+import shoeCareService from '../services/shoeCareService';
 
 const HomeScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -26,10 +27,25 @@ const HomeScreen = ({ navigation }) => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [weather, setWeather] = useState(null);
+  const [externalShoes, setExternalShoes] = useState([]);
 
   useEffect(() => {
     fetchServices();
+    fetchExternalData();
   }, []);
+
+  const fetchExternalData = async () => {
+    try {
+      const weatherData = await shoeCareService.fetchDryingWeather('Malang');
+      setWeather(weatherData);
+
+      const shoes = await shoeCareService.fetchExternalShoeRecommendations();
+      setExternalShoes(shoes.slice(0, 4));
+    } catch (e) {
+      console.log('Error external data:', e);
+    }
+  };
 
   const fetchServices = async () => {
     try {
@@ -49,6 +65,7 @@ const HomeScreen = ({ navigation }) => {
   const onRefresh = () => {
     setRefreshing(true);
     fetchServices();
+    fetchExternalData();
   };
 
   const formatRupiah = (val) => {
@@ -187,6 +204,28 @@ const HomeScreen = ({ navigation }) => {
             </View>
           </View>
 
+          {/* Quick Weather & Shoe Care Banner */}
+          <TouchableOpacity
+            style={styles.demoModulBanner}
+            onPress={() => navigation.navigate('ShoeCare')}
+            activeOpacity={0.88}
+          >
+            <View style={styles.demoBannerLeft}>
+              <View style={styles.demoBadge}>
+                <Ionicons name="sunny" size={12} color="#166534" />
+                <Text style={styles.demoBadgeText}>CUACA PENJEMURAN & PANDUAN</Text>
+              </View>
+              <Text style={styles.demoBannerTitle}>Status Cuaca & Perawatan Sepatu</Text>
+              <Text style={styles.demoBannerSubtitle}>
+                {weather
+                  ? `Cuaca ${weather.city}: ${weather.temperature}°C (${weather.weatherDescription}) • Penjemuran: ${weather.dryingCondition}`
+                  : 'Cek estimasi waktu pengeringan & kelayakan cuci kilat'}
+              </Text>
+            </View>
+            <View style={styles.demoBannerArrow}>
+              <Ionicons name="chevron-forward" size={20} color="#236B38" />
+            </View>
+          </TouchableOpacity>
 
           {/* Section: Layanan Kami */}
           <View style={styles.sectionHeader}>
@@ -223,6 +262,45 @@ const HomeScreen = ({ navigation }) => {
                   </View>
                 </TouchableOpacity>
               ))}
+            </View>
+          )}
+
+          {/* SECTION: Rekomendasi Eksternal */}
+          {externalShoes.length > 0 && (
+            <View style={{ marginTop: 10, marginBottom: 20 }}>
+              <View style={[styles.sectionHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+                <View>
+                  <Text style={styles.sectionTitle}>Inspirasi Sepatu & Sneaker</Text>
+                  <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>Katalog produk eksternal dari DummyJSON Mens-Shoes</Text>
+                </View>
+                <TouchableOpacity onPress={() => navigation.navigate('ShoeCare')}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#236B38' }}>Lihat Semua →</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingVertical: 8 }}>
+                {externalShoes.map((shoe) => (
+                  <TouchableOpacity
+                    key={shoe.id}
+                    style={styles.externalShoeCard}
+                    onPress={() => navigation.navigate('ShoeCare')}
+                    activeOpacity={0.85}
+                  >
+                    <Image source={{ uri: shoe.thumbnail }} style={styles.externalShoeImg} resizeMode="cover" />
+                    <View style={styles.externalShoeInfo}>
+                      <Text style={styles.externalShoeBrand}>{shoe.brand || 'Original'}</Text>
+                      <Text style={styles.externalShoeTitle} numberOfLines={1}>{shoe.title}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                        <Ionicons name="star" size={12} color="#F59E0B" />
+                        <Text style={{ fontSize: 11, fontWeight: '600', color: '#374151' }}>{shoe.rating}</Text>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#236B38', marginLeft: 'auto' }}>
+                          ${shoe.price}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
           )}
         </View>
@@ -547,6 +625,90 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#236B38',
     textAlign: 'center',
+  },
+  demoModulBanner: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#86EFAC',
+    padding: 14,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#166534',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  demoBannerLeft: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  demoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginBottom: 6,
+    gap: 4,
+  },
+  demoBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#166534',
+    letterSpacing: 0.5,
+  },
+  demoBannerTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#14532D',
+  },
+  demoBannerSubtitle: {
+    fontSize: 12,
+    color: '#15803D',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  demoBannerArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  externalShoeCard: {
+    width: 150,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+  },
+  externalShoeImg: {
+    width: '100%',
+    height: 100,
+    backgroundColor: '#F3F4F6',
+  },
+  externalShoeInfo: {
+    padding: 8,
+  },
+  externalShoeBrand: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+  },
+  externalShoeTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#111827',
+    marginTop: 2,
   },
 });
 

@@ -66,6 +66,15 @@ export default function CustomerTabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="explore"
+        options={{
+          tabBarLabel: 'Eksplor',
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'sparkles' : 'sparkles-outline'} size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           tabBarLabel: 'Profil',

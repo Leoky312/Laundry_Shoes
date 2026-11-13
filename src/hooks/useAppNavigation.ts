@@ -24,6 +24,10 @@ export function useAppNavigation() {
         return { pathname: '/(customer)/detail-service' as const, params: params || {} };
       case 'OrderTracking':
         return { pathname: '/(customer)/order-tracking' as const, params: params || {} };
+      case 'ShoeCare':
+        return { pathname: '/(customer)/shoe-care' as const, params: params || {} };
+      case 'ExploreTab':
+        return { pathname: '/(customer)/(tabs)/explore' as const, params };
       case 'MainTabs':
         if (params?.screen === 'HistoryTab') return { pathname: '/(customer)/(tabs)/history' as const };
         if (params?.screen === 'ProfileTab') return { pathname: '/(customer)/(tabs)/profile' as const };

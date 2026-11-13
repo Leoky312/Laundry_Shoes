@@ -33,6 +33,10 @@ yarn-error.*
 # local env files
 .env*.local
 
+# panduan lokal
+PANDUAN_*.md
+Modul 3.pdf
+
 # typescript
 *.tsbuildinfo
 
