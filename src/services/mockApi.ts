@@ -358,22 +358,75 @@ export const mockApi = {
 
   async getReports() {
     await delay();
-    let totalRevenue = 0;
-    const statusCounts: Record<string, number> = {};
+    let totalIncome = 0;
+    const paidOrders = mockOrders.filter(
+      (o) => o.payment && o.payment.paymentStatus === 'SUDAH_DIBAYAR'
+    );
 
-    mockOrders.forEach((o) => {
-      statusCounts[o.status] = (statusCounts[o.status] || 0) + 1;
-      if (o.payment && o.payment.paymentStatus === 'SUDAH_DIBAYAR') {
-        totalRevenue += parseFloat(String(o.payment.amount || o.totalAmount));
+    paidOrders.forEach((o) => {
+      totalIncome += parseFloat(String(o.payment?.amount || o.totalAmount || 0));
+    });
+
+    // 1. Rekap performa per layanan (serviceBreakdown)
+    const serviceMap: Record<
+      string,
+      { serviceName: string; totalQuantity: number; totalRevenue: number }
+    > = {};
+
+    paidOrders.forEach((o) => {
+      const items = o.orderItems && o.orderItems.length > 0 ? o.orderItems : [];
+      if (items.length === 0) {
+        const fallbackName = 'Treatment Standar';
+        if (!serviceMap[fallbackName]) {
+          serviceMap[fallbackName] = { serviceName: fallbackName, totalQuantity: 0, totalRevenue: 0 };
+        }
+        serviceMap[fallbackName].totalQuantity += 1;
+        serviceMap[fallbackName].totalRevenue += parseFloat(String(o.totalAmount || 0));
+      } else {
+        items.forEach((item: any) => {
+          const sName = item.service?.name || 'Deep Cleaning';
+          const qty = item.quantity || 1;
+          const rev = parseFloat(String(item.price || item.service?.price || 35000)) * qty;
+
+          if (!serviceMap[sName]) {
+            serviceMap[sName] = {
+              serviceName: sName,
+              totalQuantity: 0,
+              totalRevenue: 0,
+            };
+          }
+          serviceMap[sName].totalQuantity += qty;
+          serviceMap[sName].totalRevenue += rev;
+        });
       }
     });
+
+    const serviceBreakdown = Object.values(serviceMap).sort(
+      (a, b) => b.totalRevenue - a.totalRevenue
+    );
+
+    // 2. Daftar transaksi pembayaran lunas (transactions)
+    const transactions = paidOrders
+      .map((o) => ({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        totalAmount: parseFloat(String(o.payment?.amount || o.totalAmount || 0)),
+        date: o.payment?.paidAt || o.createdAt,
+        paymentMethod: o.payment?.paymentMethod || 'TRANSFER',
+      }))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return {
       success: true,
       data: {
+        summary: {
+          totalIncome,
+          totalPaidOrders: paidOrders.length,
+        },
+        serviceBreakdown,
+        transactions,
         totalOrders: mockOrders.length,
-        totalRevenue,
-        statusCounts,
+        totalRevenue: totalIncome,
         orders: mockOrders,
       },
     };
