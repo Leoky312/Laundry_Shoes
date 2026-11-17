@@ -1,22 +1,33 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  Alert,
-  Platform,
-  useWindowDimensions,
-  ActivityIndicator,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import Colors from '../constants/colors';
+import * as Location from 'expo-location';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { getImageUrl, USE_FORCE_MOCK, BASE_SERVER_URL } from '../services/api';
 import { useNetwork } from '../context/NetworkContext';
+import { BASE_SERVER_URL, getImageUrl, USE_FORCE_MOCK } from '../services/api';
+import RouteMapView from '../components/RouteMapView';
+import {
+  OUTLET_LOCATION,
+  DEFAULT_OUTLET_LOCATION,
+  GEOFENCE_CONFIG,
+  loadStoredOutletLocation,
+  saveStoredOutletLocation,
+} from '../constants/location';
+import { reverseGeocodeCoords } from '../services/routing';
 
 const AdminProfileScreen = ({ navigation }) => {
   const { user, logout, updateProfile } = useAuth();
@@ -25,6 +36,128 @@ const AdminProfileScreen = ({ navigation }) => {
   const isDesktop = width >= 768;
 
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
+
+  // States pengaturan titik outlet laundry
+  const [outletModalVisible, setOutletModalVisible] = useState(false);
+  const [outletForm, setOutletForm] = useState({
+    title: OUTLET_LOCATION.title || 'Outlet Laundry',
+    address: OUTLET_LOCATION.address || '',
+    latitude: OUTLET_LOCATION.latitude,
+    longitude: OUTLET_LOCATION.longitude,
+  });
+  const [outletRadius, setOutletRadius] = useState(GEOFENCE_CONFIG.RADIUS_METERS);
+  const [isLocatingOutlet, setIsLocatingOutlet] = useState(false);
+  const [isSavingOutlet, setIsSavingOutlet] = useState(false);
+
+  useEffect(() => {
+    loadStoredOutletLocation().then((loc) => {
+      setOutletForm({
+        title: loc.title || 'Outlet Laundry',
+        address: loc.address || '',
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+      });
+      setOutletRadius(GEOFENCE_CONFIG.RADIUS_METERS);
+    });
+  }, []);
+
+  const handleMapOutletChange = async (coords) => {
+    setOutletForm((prev) => ({
+      ...prev,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+    }));
+    try {
+      const fullAddress = await reverseGeocodeCoords(coords);
+      if (fullAddress) {
+        setOutletForm((prev) => ({ ...prev, address: fullAddress }));
+      }
+    } catch (_e) {
+      // ignore
+    }
+  };
+
+  const handleUseCurrentGpsForOutlet = async () => {
+    try {
+      setIsLocatingOutlet(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        const msg = 'Izin akses lokasi tidak diizinkan. Anda tetap dapat menggeser penanda merah pada peta.';
+        if (Platform.OS === 'web') window.alert(msg);
+        else Alert.alert('Izin Lokasi', msg);
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const coords = {
+        latitude: parseFloat(loc.coords.latitude.toFixed(6)),
+        longitude: parseFloat(loc.coords.longitude.toFixed(6)),
+      };
+      setOutletForm((prev) => ({
+        ...prev,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      }));
+
+      const fullAddress = await reverseGeocodeCoords(coords);
+      if (fullAddress) {
+        setOutletForm((prev) => ({ ...prev, address: fullAddress }));
+      }
+    } catch (err) {
+      const msg = 'Gagal mendeteksi lokasi GPS toko. Silakan tentukan titik langsung pada peta.';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Informasi Lokasi', msg);
+    } finally {
+      setIsLocatingOutlet(false);
+    }
+  };
+
+  const handleSaveOutletLocation = async () => {
+    try {
+      setIsSavingOutlet(true);
+      await saveStoredOutletLocation(
+        {
+          latitude: outletForm.latitude,
+          longitude: outletForm.longitude,
+          title: outletForm.title,
+          address: outletForm.address,
+        },
+        outletRadius
+      );
+      const msg = 'Titik lokasi outlet dan batas area jangkauan layanan laundry berhasil diperbarui.';
+      if (Platform.OS === 'web') {
+        window.alert(`Sukses: ${msg}`);
+      } else {
+        Alert.alert('Sukses', msg);
+      }
+      setOutletModalVisible(false);
+    } catch (err) {
+      const msg = 'Gagal menyimpan perubahan lokasi outlet.';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Gagal', msg);
+    } finally {
+      setIsSavingOutlet(false);
+    }
+  };
+
+  const handleResetToDefaultOutlet = () => {
+    setOutletForm({
+      title: DEFAULT_OUTLET_LOCATION.title || 'Outlet Laundry',
+      address: DEFAULT_OUTLET_LOCATION.address || '',
+      latitude: DEFAULT_OUTLET_LOCATION.latitude,
+      longitude: DEFAULT_OUTLET_LOCATION.longitude,
+    });
+    setOutletRadius(5000);
+  };
+
+  useEffect(() => {
+    if (user && user.role !== 'ADMIN') {
+      navigation.navigate('ProfileTab');
+    }
+  }, [user]);
 
   const handleChooseAvatar = async () => {
     try {
@@ -149,15 +282,6 @@ const AdminProfileScreen = ({ navigation }) => {
                 <Text style={styles.headerSubtitle}>ShoeFresh Management Center</Text>
               </View>
             </View>
-
-            <TouchableOpacity
-              style={styles.headerLogoutQuickBtn}
-              onPress={handleLogout}
-              activeOpacity={0.8}
-              accessibilityLabel="Tombol cepat keluar"
-            >
-              <Ionicons name="log-out-outline" size={20} color="#DC2626" />
-            </TouchableOpacity>
           </View>
 
           {/* Admin Profile Card */}
@@ -241,32 +365,42 @@ const AdminProfileScreen = ({ navigation }) => {
             ))}
           </View>
 
+          {/* Section: Lokasi & Jangkauan Outlet Laundry */}
+          <Text style={styles.sectionHeading}>LOKASI OUTLET & AREA JANGKAUAN</Text>
+          <View style={styles.outletCard}>
+            <View style={styles.outletCardHeader}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={styles.outletCardTitle}>{outletForm.title || 'Outlet Laundry'}</Text>
+                <Text style={styles.outletCardSubtitle}>{outletForm.address || 'Alamat belum diatur'}</Text>
+              </View>
+              <View style={styles.outletRadiusBadge}>
+                <Text style={styles.outletRadiusBadgeText}>Radius: {Math.round(outletRadius / 1000)} km</Text>
+              </View>
+            </View>
+
+            <View style={styles.outletCoordsRow}>
+              <Text style={styles.outletCoordsText}>
+                Lintang: {Number(outletForm.latitude).toFixed(6)} • Bujur: {Number(outletForm.longitude).toFixed(6)}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.outletEditBtn}
+              onPress={() => setOutletModalVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.outletEditBtnText}>Ubah Titik Lokasi & Radius Geofence</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Section: Pengaturan & Sistem */}
           <Text style={styles.sectionHeading}>INFORMASI & SISTEM</Text>
           <View style={styles.menuContainer}>
             <TouchableOpacity
               style={styles.menuRow}
-              onPress={() => navigation.navigate('HomeTab')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.menuLeft}>
-                <View style={[styles.menuIconBox, { backgroundColor: '#E0F2FE' }]}>
-                  <Ionicons name="eye-outline" size={20} color="#0284C7" />
-                </View>
-                <View style={styles.menuTextContainer}>
-                  <Text style={styles.menuTitle}>Pratinjau Tampilan Pelanggan</Text>
-                  <Text style={styles.menuSubtitle}>Lihat tampilan katalog & booking pelanggan</Text>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuRow}
               onPress={() => {
-                const info = `ShoeFresh Admin Center v1.0.0\nBackend URL: ${BASE_SERVER_URL}\nStatus Mock: ${
-                  USE_FORCE_MOCK ? 'Aktif' : 'Non-Aktif'
-                }`;
+                const info = `ShoeFresh Admin Center v1.0.0\nBackend URL: ${BASE_SERVER_URL}\nStatus Mock: ${USE_FORCE_MOCK ? 'Aktif' : 'Non-Aktif'
+                  }`;
                 if (Platform.OS === 'web') {
                   window.alert(info);
                 } else {
@@ -301,6 +435,166 @@ const AdminProfileScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Modal Pengaturan Titik Lokasi Outlet */}
+      <Modal
+        visible={outletModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setOutletModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, isDesktop && styles.desktopModalBox]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={styles.modalTitle}>Pengaturan Titik Outlet Laundry</Text>
+                <Text style={styles.modalSub}>
+                  Geser penanda merah pada peta atau gunakan GPS untuk menetapkan lokasi toko
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setOutletModalVisible(false)}
+              >
+                <Text style={styles.modalCloseBtnText}>Tutup</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
+              {/* Peta Interaktif Leaflet Penentuan Titik Outlet */}
+              <View style={styles.modalMapWrapper}>
+                <RouteMapView
+                  customerLocation={{ latitude: outletForm.latitude, longitude: outletForm.longitude }}
+                  outletLocation={{ latitude: outletForm.latitude, longitude: outletForm.longitude }}
+                  isOutletDraggable={true}
+                  hideCustomerMarker={true}
+                  centerOn="outlet"
+                  showGeofence={true}
+                  geofenceRadiusMeters={outletRadius}
+                  onOutletLocationChange={handleMapOutletChange}
+                  height={240}
+                />
+              </View>
+
+              {/* Tombol Deteksi GPS Toko */}
+              <TouchableOpacity
+                style={styles.modalGpsBtn}
+                onPress={handleUseCurrentGpsForOutlet}
+                disabled={isLocatingOutlet}
+                activeOpacity={0.8}
+              >
+                {isLocatingOutlet ? (
+                  <ActivityIndicator size="small" color="#236B38" style={{ marginRight: 6 }} />
+                ) : null}
+                <Text style={styles.modalGpsBtnText}>
+                  {isLocatingOutlet
+                    ? 'Mendeteksi Posisi Toko...'
+                    : 'Gunakan Posisi GPS Saat Ini Sebagai Titik Toko'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Form Input Detail Outlet */}
+              <Text style={styles.modalFieldLabel}>Nama / Label Outlet</Text>
+              <TextInput
+                style={styles.modalTextInput}
+                value={outletForm.title}
+                onChangeText={(text) => setOutletForm((prev) => ({ ...prev, title: text }))}
+                placeholder="Contoh: Workshop ShoeFresh Sudirman"
+                placeholderTextColor="#9CA3AF"
+              />
+
+              <Text style={styles.modalFieldLabel}>Alamat Lengkap Toko</Text>
+              <TextInput
+                style={[styles.modalTextInput, { minHeight: 60 }]}
+                value={outletForm.address}
+                onChangeText={(text) => setOutletForm((prev) => ({ ...prev, address: text }))}
+                multiline
+                placeholder="Alamat lengkap toko laundry..."
+                placeholderTextColor="#9CA3AF"
+              />
+
+              <View style={styles.modalCoordsRow}>
+                <View style={{ flex: 1, marginRight: 6 }}>
+                  <Text style={styles.modalFieldLabel}>Latitude (Lintang)</Text>
+                  <TextInput
+                    style={styles.modalTextInput}
+                    value={String(outletForm.latitude)}
+                    onChangeText={(val) => {
+                      const num = parseFloat(val);
+                      if (!isNaN(num)) setOutletForm((prev) => ({ ...prev, latitude: num }));
+                    }}
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={{ flex: 1, marginLeft: 6 }}>
+                  <Text style={styles.modalFieldLabel}>Longitude (Bujur)</Text>
+                  <TextInput
+                    style={styles.modalTextInput}
+                    value={String(outletForm.longitude)}
+                    onChangeText={(val) => {
+                      const num = parseFloat(val);
+                      if (!isNaN(num)) setOutletForm((prev) => ({ ...prev, longitude: num }));
+                    }}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+
+              {/* Pilihan Radius Jangkauan Geofence */}
+              <Text style={styles.modalFieldLabel}>Batas Radius Jangkauan Layanan (Geofence)</Text>
+              <View style={styles.radiusOptionsRow}>
+                {[
+                  { label: '3 km', meters: 3000 },
+                  { label: '5 km (Standar)', meters: 5000 },
+                  { label: '10 km', meters: 10000 },
+                  { label: '15 km', meters: 15000 },
+                ].map((opt) => (
+                  <TouchableOpacity
+                    key={opt.meters}
+                    style={[
+                      styles.radiusOptionBtn,
+                      outletRadius === opt.meters && styles.radiusOptionBtnActive,
+                    ]}
+                    onPress={() => setOutletRadius(opt.meters)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.radiusOptionText,
+                        outletRadius === opt.meters && styles.radiusOptionTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Action Buttons */}
+              <TouchableOpacity
+                style={styles.saveOutletBtn}
+                onPress={handleSaveOutletLocation}
+                disabled={isSavingOutlet}
+                activeOpacity={0.85}
+              >
+                {isSavingOutlet ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.saveOutletBtnText}>Simpan Titik Lokasi Outlet</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.resetOutletBtn}
+                onPress={handleResetToDefaultOutlet}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.resetOutletBtnText}>Kembalikan ke Koordinat Standar</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -360,14 +654,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     marginTop: 1,
-  },
-  headerLogoutQuickBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#FEE2E2',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   userSection: {
     backgroundColor: '#FFFFFF',
@@ -553,6 +839,219 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontSize: 15,
     fontWeight: '800',
+  },
+  outletCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  outletCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  outletCardTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  outletCardSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 17,
+  },
+  outletRadiusBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  outletRadiusBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#15803D',
+  },
+  outletCoordsRow: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginBottom: 12,
+  },
+  outletCoordsText: {
+    fontSize: 11,
+    color: '#475569',
+    fontWeight: '600',
+  },
+  outletEditBtn: {
+    backgroundColor: '#236B38',
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  outletEditBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    width: '100%',
+    maxHeight: '90%',
+    padding: 20,
+    overflow: 'hidden',
+  },
+  desktopModalBox: {
+    maxWidth: 620,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  modalSub: {
+    fontSize: 11,
+    color: '#64748B',
+    lineHeight: 16,
+  },
+  modalCloseBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+  },
+  modalCloseBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  modalScroll: {
+    paddingBottom: 20,
+  },
+  modalMapWrapper: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    marginBottom: 12,
+  },
+  modalGpsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 14,
+  },
+  modalGpsBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  modalFieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 5,
+    marginTop: 8,
+  },
+  modalTextInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: '#0F172A',
+  },
+  modalCoordsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  radiusOptionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  radiusOptionBtn: {
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  radiusOptionBtnActive: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#22C55E',
+  },
+  radiusOptionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  radiusOptionTextActive: {
+    color: '#15803D',
+    fontWeight: '800',
+  },
+  saveOutletBtn: {
+    backgroundColor: '#236B38',
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+  saveOutletBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  resetOutletBtn: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  resetOutletBtnText: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
 

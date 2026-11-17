@@ -12,7 +12,7 @@ import { useRouter, useSegments } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { isLoading, isAuthenticated } = useAuth();
+  const { isLoading, isAuthenticated, isAdmin } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -21,8 +21,17 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     const inAuthGroup = segments[0] === '(auth)';
     if (!isAuthenticated && !inAuthGroup && segments[0]) {
       router.replace('/(auth)/login');
+    } else if (isAuthenticated) {
+      // Role protection: Customer biasa tidak boleh masuk ke rute (admin)
+      if (!isAdmin && segments[0] === '(admin)') {
+        router.replace('/(customer)/(tabs)');
+      }
+      // Jika admin masih di grup (auth), arahkan ke dashboard admin
+      if (isAdmin && inAuthGroup) {
+        router.replace('/(admin)/(tabs)');
+      }
     }
-  }, [isLoading, isAuthenticated, segments]);
+  }, [isLoading, isAuthenticated, isAdmin, segments]);
 
   return <>{children}</>;
 }

@@ -1,14 +1,16 @@
-import initialUsers from '../data/users.json';
-import initialServices from '../data/services.json';
 import initialOrders from '../data/orders.json';
+import initialServices from '../data/services.json';
+import initialUsers from '../data/users.json';
 import Storage from './storage';
 
-// In-Memory state for mock session with local AsyncStorage persistence
+// In-Memory state for mock session with local AsyncStorage/LocalStorage persistence
 let mockUsers = [...initialUsers];
 let mockServices = [...initialServices];
 let mockOrders = [...initialOrders];
 
 let isOrdersLoadedFromStorage = false;
+let isServicesLoadedFromStorage = false;
+let isUsersLoadedFromStorage = false;
 
 const loadOrdersFromStorage = async () => {
   if (isOrdersLoadedFromStorage) return;
@@ -16,6 +18,9 @@ const loadOrdersFromStorage = async () => {
     const saved = await Storage.getItem('@mock_orders');
     if (saved) {
       mockOrders = JSON.parse(saved);
+    } else {
+      mockOrders = [...initialOrders];
+      await Storage.setItem('@mock_orders', JSON.stringify(mockOrders));
     }
   } catch (_e) {
     // fallback
@@ -27,6 +32,72 @@ const loadOrdersFromStorage = async () => {
 const saveOrdersToStorage = async () => {
   try {
     await Storage.setItem('@mock_orders', JSON.stringify(mockOrders));
+  } catch (_e) {
+    // fallback
+  }
+};
+
+const loadServicesFromStorage = async () => {
+  if (isServicesLoadedFromStorage) return;
+  try {
+    const saved = await Storage.getItem('@mock_services');
+    if (saved) {
+      mockServices = JSON.parse(saved);
+    } else {
+      mockServices = [...initialServices];
+      await Storage.setItem('@mock_services', JSON.stringify(mockServices));
+    }
+  } catch (_e) {
+    // fallback
+  } finally {
+    isServicesLoadedFromStorage = true;
+  }
+};
+
+const saveServicesToStorage = async () => {
+  try {
+    await Storage.setItem('@mock_services', JSON.stringify(mockServices));
+  } catch (_e) {
+    // fallback
+  }
+};
+
+const loadUsersFromStorage = async () => {
+  if (isUsersLoadedFromStorage) return;
+  try {
+    const saved = await Storage.getItem('@mock_users');
+    if (saved) {
+      mockUsers = JSON.parse(saved);
+      // Validasi dan perbaiki jika ada akun admin yang tertimpa atau role tertukar
+      const adminExists = mockUsers.some((u) => u.email === 'admin@laundryshoes.com' && u.role === 'ADMIN');
+      if (!adminExists) {
+        mockUsers = [...initialUsers];
+        await Storage.setItem('@mock_users', JSON.stringify(mockUsers));
+      } else {
+        mockUsers = mockUsers.map((u) => {
+          if (u.email.toLowerCase() === 'customer@gmail.com') {
+            return { ...u, role: 'CUSTOMER' as const };
+          }
+          if (u.email.toLowerCase() === 'admin@laundryshoes.com') {
+            return { ...u, role: 'ADMIN' as const, name: 'Admin Shoes' };
+          }
+          return u;
+        });
+      }
+    } else {
+      mockUsers = [...initialUsers];
+      await Storage.setItem('@mock_users', JSON.stringify(mockUsers));
+    }
+  } catch (_e) {
+    // fallback
+  } finally {
+    isUsersLoadedFromStorage = true;
+  }
+};
+
+const saveUsersToStorage = async () => {
+  try {
+    await Storage.setItem('@mock_users', JSON.stringify(mockUsers));
   } catch (_e) {
     // fallback
   }
@@ -74,6 +145,7 @@ export const mockApi = {
   // 1. SERVICES
   async getServices(includeAll = false) {
     await delay();
+    await loadServicesFromStorage();
     return {
       success: true,
       message: 'Daftar layanan berhasil diambil (Mock).',
@@ -83,6 +155,7 @@ export const mockApi = {
 
   async getServiceDetail(id: number | string) {
     await delay();
+    await loadServicesFromStorage();
     const service = mockServices.find((s) => String(s.id) === String(id));
     if (!service) throw new Error('Layanan tidak ditemukan.');
     return { success: true, data: service };
@@ -90,6 +163,7 @@ export const mockApi = {
 
   async createService(data: any) {
     await delay();
+    await loadServicesFromStorage();
     const newService = {
       id: Date.now(),
       name: data.name,
@@ -102,11 +176,13 @@ export const mockApi = {
       updatedAt: new Date().toISOString(),
     };
     mockServices.push(newService);
+    await saveServicesToStorage();
     return { success: true, message: 'Layanan baru berhasil ditambahkan.', data: newService };
   },
 
   async updateService(id: number | string, data: any) {
     await delay();
+    await loadServicesFromStorage();
     const index = mockServices.findIndex((s) => String(s.id) === String(id));
     if (index === -1) throw new Error('Layanan tidak ditemukan.');
     mockServices[index] = {
@@ -115,20 +191,24 @@ export const mockApi = {
       price: data.price !== undefined ? String(data.price) : mockServices[index].price,
       updatedAt: new Date().toISOString(),
     };
+    await saveServicesToStorage();
     return { success: true, message: 'Layanan berhasil diperbarui.', data: mockServices[index] };
   },
 
   async deleteService(id: number | string) {
     await delay();
+    await loadServicesFromStorage();
     const index = mockServices.findIndex((s) => String(s.id) === String(id));
     if (index === -1) throw new Error('Layanan tidak ditemukan.');
     const removed = mockServices.splice(index, 1)[0];
+    await saveServicesToStorage();
     return { success: true, message: 'Layanan berhasil dihapus.', data: removed };
   },
 
   // 2. AUTH
   async login(email: string, password: string) {
     await delay();
+    await loadUsersFromStorage();
     const user = mockUsers.find(
       (u) => u.email.toLowerCase() === email.toLowerCase()
     );
@@ -158,6 +238,7 @@ export const mockApi = {
 
   async register(data: { name: string; email: string; password: string; phone?: string; address?: string }) {
     await delay();
+    await loadUsersFromStorage();
     const exists = mockUsers.some((u) => u.email.toLowerCase() === data.email.toLowerCase());
     if (exists) {
       throw new Error('Email sudah terdaftar. Silakan gunakan email lain.');
@@ -177,6 +258,7 @@ export const mockApi = {
     };
 
     mockUsers.push(newUser);
+    await saveUsersToStorage();
     const token = generateMockJwt(newUser);
     const safeUser = { ...newUser };
     delete (safeUser as any).password;
@@ -193,10 +275,103 @@ export const mockApi = {
 
   async getMe(userId?: number) {
     await delay();
-    const user = mockUsers.find((u) => u.id === userId) || mockUsers[1];
+    await loadUsersFromStorage();
+
+    let targetId = userId;
+    if (!targetId) {
+      try {
+        const storedUser = await Storage.getItem('@auth_user');
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          targetId = parsed.id;
+        }
+      } catch (_e) {
+        // ignore
+      }
+    }
+
+    const user = mockUsers.find((u) => u.id === targetId);
+    if (!user) {
+      throw new Error('Sesi tidak ditemukan atau kedaluwarsa.');
+    }
+
     const safeUser = { ...user };
     delete (safeUser as any).password;
     return { success: true, data: safeUser };
+  },
+
+  async updateProfile(data: any) {
+    await delay();
+    await loadUsersFromStorage();
+
+    let targetUserId: number | null = null;
+    try {
+      const storedUser = await Storage.getItem('@auth_user');
+      if (storedUser) {
+        const u = JSON.parse(storedUser);
+        targetUserId = u.id;
+      }
+    } catch (_e) {
+      // ignore
+    }
+
+    const userIndex = mockUsers.findIndex((u) => u.id === targetUserId);
+    if (userIndex === -1) {
+      throw new Error('Pengguna tidak ditemukan untuk diperbarui.');
+    }
+
+    const currentUser = mockUsers[userIndex];
+
+    let updatedName = currentUser.name;
+    let updatedPhone = currentUser.phone || '';
+    let updatedAddress = currentUser.address || '';
+    let updatedAvatar = currentUser.avatar;
+    let updatedLatitude = (currentUser as any).latitude;
+    let updatedLongitude = (currentUser as any).longitude;
+
+    if (data && typeof data.get === 'function') {
+      if (data.get('name')) updatedName = data.get('name');
+      if (data.get('phone')) updatedPhone = data.get('phone');
+      if (data.get('address')) updatedAddress = data.get('address');
+      if (data.get('latitude')) updatedLatitude = parseFloat(data.get('latitude'));
+      if (data.get('longitude')) updatedLongitude = parseFloat(data.get('longitude'));
+      const av = data.get('avatar');
+      if (typeof av === 'string') updatedAvatar = av;
+      else if (av && av.uri) updatedAvatar = av.uri;
+    } else if (data && typeof data === 'object') {
+      if (data.name) updatedName = data.name;
+      if (data.phone) updatedPhone = data.phone;
+      if (data.address) updatedAddress = data.address;
+      if (data.latitude) updatedLatitude = parseFloat(data.latitude);
+      if (data.longitude) updatedLongitude = parseFloat(data.longitude);
+      if (typeof data.avatar === 'string') updatedAvatar = data.avatar;
+      else if (data.avatar && data.avatar.uri) updatedAvatar = data.avatar.uri;
+    }
+
+    const updatedUser = {
+      ...currentUser,
+      name: updatedName,
+      phone: updatedPhone,
+      address: updatedAddress,
+      latitude: updatedLatitude,
+      longitude: updatedLongitude,
+      avatar: updatedAvatar,
+      role: currentUser.role, // PERTAHANKAN ROLE ASLI PENGGUNA!
+      updatedAt: new Date().toISOString(),
+    };
+
+    mockUsers[userIndex] = updatedUser;
+
+    await saveUsersToStorage();
+    const safeUser = { ...updatedUser };
+    delete (safeUser as any).password;
+    await Storage.setItem('@auth_user', JSON.stringify(safeUser));
+
+    return {
+      success: true,
+      message: 'Profil berhasil diperbarui.',
+      data: safeUser,
+    };
   },
 
   async logout() {
@@ -280,6 +455,11 @@ export const mockApi = {
           pickupDate: (orderPayload as any).get('pickupDate'),
           shoePhoto: (orderPayload as any).get('shoePhoto'),
           paymentProof: (orderPayload as any).get('paymentProof'),
+          pickupAddress: (orderPayload as any).get('pickupAddress') || (orderPayload as any).get('address'),
+          pickupLatitude: (orderPayload as any).get('pickupLatitude'),
+          pickupLongitude: (orderPayload as any).get('pickupLongitude'),
+          distanceKm: (orderPayload as any).get('distanceKm'),
+          deliveryFee: (orderPayload as any).get('deliveryFee'),
         };
       } catch (_e) {
         // fallback
@@ -309,6 +489,9 @@ export const mockApi = {
     const hasProof = !!payload.paymentProof;
     const isCod = payload.paymentMethod === 'COD';
 
+    const shippingCost = payload.deliveryFee ? parseFloat(String(payload.deliveryFee)) : 0;
+    const finalTotalAmount = totalAmount + shippingCost;
+
     const newOrder = {
       id: Date.now(),
       orderNumber,
@@ -316,7 +499,12 @@ export const mockApi = {
       pickupDate: payload.pickupDate || now.toISOString(),
       deliveryDate: null,
       status: 'MENUNGGU',
-      totalAmount,
+      pickupAddress: payload.pickupAddress || null,
+      pickupLatitude: payload.pickupLatitude ? parseFloat(String(payload.pickupLatitude)) : null,
+      pickupLongitude: payload.pickupLongitude ? parseFloat(String(payload.pickupLongitude)) : null,
+      distanceKm: payload.distanceKm ? parseFloat(String(payload.distanceKm)) : null,
+      deliveryFee: shippingCost,
+      totalAmount: finalTotalAmount,
       notes: payload.notes || '',
       shoePhoto: payload.shoePhoto || null,
       orderItems: items,
@@ -324,7 +512,7 @@ export const mockApi = {
         id: Date.now(),
         paymentMethod: payload.paymentMethod || 'QRIS',
         paymentStatus: hasProof ? 'MENUNGGU_VERIFIKASI' : (isCod ? 'BAYAR_DI_TEMPAT' : 'MENUNGGU_PEMBAYARAN'),
-        amount: totalAmount,
+        amount: finalTotalAmount,
         paymentProof: payload.paymentProof || null,
         paidAt: hasProof ? now.toISOString() : null,
         createdAt: now.toISOString(),
@@ -341,14 +529,14 @@ export const mockApi = {
       ],
       galleries: payload.shoePhoto
         ? [
-            {
-              id: Date.now(),
-              type: 'BEFORE',
-              imageUrl: payload.shoePhoto,
-              caption: 'Foto Sepatu Sebelum Dicuci',
-              createdAt: now.toISOString(),
-            },
-          ]
+          {
+            id: Date.now(),
+            type: 'BEFORE',
+            imageUrl: payload.shoePhoto,
+            caption: 'Foto Sepatu Sebelum Dicuci',
+            createdAt: now.toISOString(),
+          },
+        ]
         : [],
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
@@ -552,6 +740,60 @@ export const mockApi = {
         orders: mockOrders,
       },
     };
+  },
+
+  async addOrderGallery(orderId: number | string, data: any) {
+    await delay();
+    await loadOrdersFromStorage();
+    const order = mockOrders.find((o) => String(o.id) === String(orderId));
+    if (!order) throw new Error('Pesanan tidak ditemukan.');
+
+    let imageUrl = '';
+    let type = 'SESUDAH';
+    let caption = 'Foto hasil akhir laundry sepatu';
+
+    if (data && typeof data.get === 'function') {
+      type = data.get('type') || type;
+      caption = data.get('caption') || caption;
+      const imgField = data.get('image');
+      if (typeof imgField === 'string') imageUrl = imgField;
+      else if (imgField && imgField.uri) imageUrl = imgField.uri;
+    } else if (data && typeof data === 'object') {
+      type = data.type || type;
+      caption = data.caption || caption;
+      if (typeof data.image === 'string') imageUrl = data.image;
+      else if (data.image && data.image.uri) imageUrl = data.image.uri;
+    }
+
+    if (!imageUrl) {
+      imageUrl = 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop&q=80';
+    }
+
+    if (!order.galleries) {
+      order.galleries = [];
+    }
+
+    const newGalleryItem = {
+      id: Date.now(),
+      type,
+      imageUrl,
+      caption,
+      createdAt: new Date().toISOString(),
+    };
+
+    order.galleries.push(newGalleryItem);
+    await saveOrdersToStorage();
+    return { success: true, message: 'Foto hasil laundry berhasil diunggah.', data: newGalleryItem };
+  },
+
+  async resetAllMockData() {
+    mockUsers = [...initialUsers];
+    mockServices = [...initialServices];
+    mockOrders = [...initialOrders];
+    await Storage.setItem('@mock_users', JSON.stringify(mockUsers));
+    await Storage.setItem('@mock_services', JSON.stringify(mockServices));
+    await Storage.setItem('@mock_orders', JSON.stringify(mockOrders));
+    return { success: true, message: 'Data mock berhasil direset ke setelan awal.' };
   },
 };
 

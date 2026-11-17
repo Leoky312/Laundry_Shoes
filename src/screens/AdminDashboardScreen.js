@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Platform,
   RefreshControl,
@@ -21,7 +20,7 @@ import api, { getImageUrl } from '../services/api';
 import ErrorState from '../components/ErrorState';
 
 const AdminDashboardScreen = ({ navigation }) => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,8 +28,12 @@ const AdminDashboardScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
+    if (user && user.role !== 'ADMIN') {
+      navigation.navigate('HomeTab');
+      return;
+    }
     fetchDashboardData();
-  }, []);
+  }, [user]);
 
   const fetchDashboardData = async () => {
     try {
@@ -63,24 +66,6 @@ const AdminDashboardScreen = ({ navigation }) => {
     navigation.navigate('Orders', { initialFilter: filterStatus });
   };
 
-  const handleAdminLogout = () => {
-    const doLogout = async () => {
-      await logout();
-      navigation.navigate('Login');
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm('Keluar dari sesi Administrator Shoefresh?')) {
-        doLogout();
-      }
-    } else {
-      Alert.alert('Konfirmasi Keluar', 'Keluar dari sesi Administrator Shoefresh?', [
-        { text: 'Batal', style: 'cancel' },
-        { text: 'Keluar', style: 'destructive', onPress: doLogout },
-      ]);
-    }
-  };
-
   return (
     <ScrollView
       style={styles.container}
@@ -109,18 +94,10 @@ const AdminDashboardScreen = ({ navigation }) => {
 
         <View style={styles.headerRight}>
           <TouchableOpacity
-            style={styles.adminLogoutBtn}
-            onPress={handleAdminLogout}
-            activeOpacity={0.8}
-            accessibilityLabel="Keluar dari akun admin"
-          >
-            <Ionicons name="log-out-outline" size={20} color="#DC2626" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
             style={styles.adminAvatarBtn}
             onPress={() => navigation.navigate('AdminProfile')}
             activeOpacity={0.8}
+            accessibilityLabel="Buka Profil Admin"
           >
             <Image
               source={{
@@ -474,17 +451,6 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  adminLogoutBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FEE2E2',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
   },
   adminAvatarBtn: {
     width: 48,

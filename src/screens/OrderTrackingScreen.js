@@ -1,22 +1,29 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-  Platform,
-  useWindowDimensions,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Colors from '../constants/colors';
-import api from '../services/api';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import ErrorState from '../components/ErrorState';
 import PhotoPickerModal from '../components/PhotoPickerModal';
+import RouteMapView from '../components/RouteMapView';
+import {
+  DEFAULT_CUSTOMER_LOCATION,
+  OUTLET_LOCATION,
+  loadStoredOutletLocation,
+  subscribeOutletLocation,
+} from '../constants/location';
+import api from '../services/api';
+import { getRoadRoute } from '../services/routing';
 
 const TRACKING_STEPS = [
   { key: 'MENUNGGU', label: 'Pesanan Diterima' },
@@ -36,6 +43,21 @@ const OrderTrackingScreen = ({ route, navigation }) => {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
+
+  // Route & Courier tracking states
+  const [outletCoords, setOutletCoords] = useState(OUTLET_LOCATION);
+  const [routeData, setRouteData] = useState(null);
+  const [routeLoading, setRouteLoading] = useState(false);
+
+  useEffect(() => {
+    loadStoredOutletLocation().then((loc) => {
+      setOutletCoords({ ...loc });
+    });
+    const unsubscribe = subscribeOutletLocation((newLoc) => {
+      setOutletCoords({ ...newLoc });
+    });
+    return unsubscribe;
+  }, []);
 
   // Upload proof modal states
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
@@ -159,6 +181,55 @@ const OrderTrackingScreen = ({ route, navigation }) => {
     return -1;
   };
 
+  const customerCoords = useMemo(() => {
+    if (order?.pickupLatitude && order?.pickupLongitude) {
+      return {
+        latitude: parseFloat(String(order.pickupLatitude)),
+        longitude: parseFloat(String(order.pickupLongitude)),
+      };
+    }
+    return DEFAULT_CUSTOMER_LOCATION;
+  }, [order?.pickupLatitude, order?.pickupLongitude]);
+
+  useEffect(() => {
+    if (!order) return;
+    let isMounted = true;
+    const loadRoute = async () => {
+      setRouteLoading(true);
+      try {
+        const res = await getRoadRoute(outletCoords, customerCoords);
+        if (isMounted) setRouteData(res);
+      } catch (e) {
+        console.warn('Gagal memuat rute tracking:', e);
+      } finally {
+        if (isMounted) setRouteLoading(false);
+      }
+    };
+    loadRoute();
+    return () => {
+      isMounted = false;
+    };
+  }, [customerCoords, order, outletCoords]);
+
+  const routeCoords = routeData?.coordinates || [];
+
+  const courierCoords = useMemo(() => {
+    if (!order) return null;
+    if (order.status === 'SELESAI') return customerCoords;
+    if (order.status === 'MENUNGGU') return outletCoords;
+    if (routeCoords.length > 0) {
+      const idx = Math.floor(routeCoords.length * 0.55);
+      return {
+        latitude: routeCoords[idx][0],
+        longitude: routeCoords[idx][1],
+      };
+    }
+    return {
+      latitude: (outletCoords.latitude + customerCoords.latitude) / 2,
+      longitude: (outletCoords.longitude + customerCoords.longitude) / 2,
+    };
+  }, [order, routeCoords, customerCoords, outletCoords]);
+
   if (loading && !order) {
     return (
       <View style={styles.centerContainer}>
@@ -232,8 +303,8 @@ const OrderTrackingScreen = ({ route, navigation }) => {
                   {isCanceled
                     ? 'Dibatalkan'
                     : order?.status === 'SELESAI'
-                    ? 'Selesai'
-                    : 'Dalam Proses'}
+                      ? 'Selesai'
+                      : 'Dalam Proses'}
                 </Text>
               </View>
             </View>
@@ -242,8 +313,8 @@ const OrderTrackingScreen = ({ route, navigation }) => {
               {isCanceled
                 ? 'Pesanan ini telah dibatalkan.'
                 : order?.status === 'SELESAI'
-                ? 'Sepatu kamu sudah bersih dan siap digunakan!'
-                : 'Pesanan kamu sedang dicuci.'}
+                  ? 'Sepatu kamu sudah bersih dan siap digunakan!'
+                  : 'Pesanan kamu sedang dicuci.'}
             </Text>
           </View>
 
@@ -324,6 +395,50 @@ const OrderTrackingScreen = ({ route, navigation }) => {
             <Text style={styles.contactBtnText}>Hubungi Kami</Text>
           </TouchableOpacity>
 
+          {/* Section: Peta Pelacakan Rute & Posisi Kurir */}
+          <Text style={styles.sectionTitle}>Peta Pelacakan Rute & Posisi Kurir</Text>
+          <View style={styles.trackingMapCard}>
+            <RouteMapView
+              customerLocation={customerCoords}
+              outletLocation={outletCoords}
+              courierLocation={courierCoords}
+              routeCoordinates={routeCoords}
+              isDraggable={false}
+              distanceKm={routeData?.distanceKm || order?.distanceKm || 2}
+              durationMinutes={routeData?.durationMinutes || 10}
+              isLoading={routeLoading}
+              height={260}
+              showGeofence={false}
+            />
+            <View style={styles.mapInfoFooter}>
+              <View style={styles.mapInfoCol}>
+                <Text style={styles.mapInfoLabel}>Alamat Penjemputan / Antar</Text>
+                <Text style={styles.mapInfoVal} numberOfLines={2}>
+                  {order?.pickupAddress || order?.user?.address || 'Jl. Melati No. 12, Kebayoran Baru, Jakarta Selatan'}
+                </Text>
+              </View>
+              <View style={styles.mapDivider} />
+              <View style={styles.mapMetaRow}>
+                <View style={styles.mapMetaItem}>
+                  <Text style={styles.mapMetaSub}>Jarak Rute</Text>
+                  <Text style={styles.mapMetaBold}>{routeData?.distanceKm || order?.distanceKm || 2} km</Text>
+                </View>
+                <View style={styles.mapMetaItem}>
+                  <Text style={styles.mapMetaSub}>Status Pengiriman</Text>
+                  <Text style={[styles.mapMetaBold, { color: isCanceled ? '#DC2626' : '#15803D' }]}>
+                    {isCanceled
+                      ? 'Dibatalkan'
+                      : order?.status === 'SELESAI'
+                        ? 'Tiba di Tujuan'
+                        : order?.status === 'MENUNGGU'
+                          ? 'Menunggu Penjemputan'
+                          : 'Kurir Menuju Lokasi'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
           {/* Section: Detail Pesanan Item Card */}
           <Text style={styles.sectionTitle}>Detail Pesanan</Text>
           <View style={styles.orderDetailCard}>
@@ -347,23 +462,57 @@ const OrderTrackingScreen = ({ route, navigation }) => {
             <Text style={styles.orderDetailQty}>x{firstItem?.quantity || 1}</Text>
           </View>
 
-          {/* Section: Dokumentasi Foto Sepatu (Kamera) */}
-          {(order?.shoePhoto || order?.galleries?.[0]?.imageUrl) && (
-            <>
-              <Text style={styles.sectionTitle}>Foto Sepatu (Dokumentasi)</Text>
-              <View style={styles.photoCard}>
-                <Image
-                  source={{ uri: order?.shoePhoto || order?.galleries?.[0]?.imageUrl }}
-                  style={styles.shoePhotoImg}
-                  resizeMode="cover"
-                />
-                <View style={styles.photoBadgeRow}>
-                  <Ionicons name="camera" size={14} color="#236B38" />
-                  <Text style={styles.photoBadgeText}>Kondisi Sepatu Sebelum Dicuci</Text>
-                </View>
-              </View>
-            </>
-          )}
+          {/* Section: Dokumentasi Foto Sepatu (Sebelum & Hasil Selesai dari Admin) */}
+          {(() => {
+            const beforePhoto =
+              order?.shoePhoto ||
+              order?.galleries?.find((g) => g.type === 'BEFORE' || g.type === 'SEBELUM')?.imageUrl ||
+              (order?.galleries?.length === 1 && order?.galleries?.[0]?.type !== 'SESUDAH' ? order?.galleries?.[0]?.imageUrl : null);
+            const afterPhoto =
+              order?.galleries?.find((g) => g.type === 'SESUDAH' || g.type === 'AFTER')?.imageUrl;
+
+            if (!beforePhoto && !afterPhoto) return null;
+
+            return (
+              <>
+                <Text style={styles.sectionTitle}>Dokumentasi Foto Sepatu</Text>
+
+                {/* Foto Sebelum Dicuci (Customer) */}
+                {beforePhoto && (
+                  <View style={styles.photoCard}>
+                    <Image
+                      source={{ uri: beforePhoto }}
+                      style={styles.shoePhotoImg}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.photoBadgeRow}>
+                      <Ionicons name="camera" size={14} color="#D97706" />
+                      <Text style={[styles.photoBadgeText, { color: '#B45309' }]}>
+                        Kondisi Awal Sebelum Dicuci (Customer)
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Foto Hasil Selesai Laundry (Admin) */}
+                {afterPhoto && (
+                  <View style={[styles.photoCard, { borderColor: '#86EFAC', borderWidth: 1.5 }]}>
+                    <Image
+                      source={{ uri: afterPhoto }}
+                      style={styles.shoePhotoImg}
+                      resizeMode="cover"
+                    />
+                    <View style={[styles.photoBadgeRow, { backgroundColor: '#F0FDF4' }]}>
+                      <Ionicons name="sparkles" size={14} color="#16A34A" />
+                      <Text style={[styles.photoBadgeText, { color: '#15803D' }]}>
+                        Hasil Selesai Treatment (Admin)
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </>
+            );
+          })()}
 
           {/* Section: Bukti Pembayaran Transfer Bank */}
           {order?.payment?.paymentMethod === 'TRANSFER_BANK' && (
@@ -625,6 +774,61 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#236B38',
+  },
+  trackingMapCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    overflow: 'hidden',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  mapInfoFooter: {
+    padding: 14,
+    backgroundColor: '#FFFFFF',
+  },
+  mapInfoCol: {
+    marginBottom: 8,
+  },
+  mapInfoLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  mapInfoVal: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#132A1B',
+    lineHeight: 18,
+  },
+  mapDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginVertical: 8,
+  },
+  mapMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  mapMetaItem: {
+    gap: 2,
+  },
+  mapMetaSub: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontWeight: '600',
+  },
+  mapMetaBold: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#132A1B',
   },
   sectionTitle: {
     fontSize: 15,

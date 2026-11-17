@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,17 +9,177 @@ import {
   Alert,
   Platform,
   useWindowDimensions,
+  Modal,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import Colors from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 import { getImageUrl } from '../services/api';
+import RouteMapView from '../components/RouteMapView';
+import {
+  DEFAULT_CUSTOMER_LOCATION,
+  OUTLET_LOCATION,
+  GEOFENCE_CONFIG,
+  loadStoredOutletLocation,
+  subscribeOutletLocation,
+} from '../constants/location';
+import { reverseGeocodeCoords, checkGeofenceStatus } from '../services/routing';
 
 const ProfileScreen = ({ navigation }) => {
   const { user, logout, updateProfile } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+
+  // States pengaturan alamat customer
+  const [addressModalVisible, setAddressModalVisible] = useState(false);
+  const [outletCoords, setOutletCoords] = useState(OUTLET_LOCATION);
+  const [geofenceRadius, setGeofenceRadius] = useState(GEOFENCE_CONFIG.RADIUS_METERS);
+  const [customerCoords, setCustomerCoords] = useState(() => {
+    if (user?.latitude && user?.longitude) {
+      return { latitude: user.latitude, longitude: user.longitude };
+    }
+    return DEFAULT_CUSTOMER_LOCATION;
+  });
+  const [addressText, setAddressText] = useState(user?.address || '');
+  const [isLocating, setIsLocating] = useState(false);
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [geofenceStatus, setGeofenceStatus] = useState(() =>
+    checkGeofenceStatus(
+      user?.latitude && user?.longitude
+        ? { latitude: user.latitude, longitude: user.longitude }
+        : DEFAULT_CUSTOMER_LOCATION,
+      OUTLET_LOCATION,
+      GEOFENCE_CONFIG.RADIUS_METERS
+    )
+  );
+
+  useEffect(() => {
+    loadStoredOutletLocation().then((loc) => {
+      setOutletCoords({ ...loc });
+      setGeofenceRadius(GEOFENCE_CONFIG.RADIUS_METERS);
+    });
+
+    const unsubscribe = subscribeOutletLocation((newLoc, rad) => {
+      setOutletCoords({ ...newLoc });
+      setGeofenceRadius(rad);
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      if (user.address) setAddressText(user.address);
+      if (user.latitude && user.longitude) {
+        const coords = { latitude: user.latitude, longitude: user.longitude };
+        setCustomerCoords(coords);
+        setGeofenceStatus(checkGeofenceStatus(coords, outletCoords, geofenceRadius));
+      }
+    }
+  }, [user, outletCoords, geofenceRadius]);
+
+  const handleLocationChange = async (coords) => {
+    setCustomerCoords(coords);
+    const status = checkGeofenceStatus(coords, outletCoords, geofenceRadius);
+    setGeofenceStatus(status);
+    try {
+      const fullAddress = await reverseGeocodeCoords(coords);
+      if (fullAddress) {
+        setAddressText(fullAddress);
+      }
+    } catch (_e) {
+      // ignore
+    }
+  };
+
+  const handleUseCurrentGps = async () => {
+    try {
+      setIsLocating(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        const msg = 'Izin akses lokasi tidak diizinkan. Anda tetap dapat menggeser penanda biru pada peta.';
+        if (Platform.OS === 'web') window.alert(msg);
+        else Alert.alert('Izin Lokasi', msg);
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const newCoords = {
+        latitude: parseFloat(loc.coords.latitude.toFixed(6)),
+        longitude: parseFloat(loc.coords.longitude.toFixed(6)),
+      };
+      setCustomerCoords(newCoords);
+
+      const fullAddress = await reverseGeocodeCoords(newCoords);
+      if (fullAddress) {
+        setAddressText(fullAddress);
+      }
+
+      const geoStat = checkGeofenceStatus(newCoords, outletCoords, geofenceRadius);
+      setGeofenceStatus(geoStat);
+
+      const feedbackTitle = 'Informasi Jangkauan Layanan';
+      const feedbackMsg = geoStat.isInside
+        ? 'Anda berada di dalam area jangkauan layanan laundry.'
+        : 'Lokasi Anda berada di luar area jangkauan layanan.';
+
+      if (Platform.OS === 'web') {
+        window.alert(feedbackTitle + ':\n' + feedbackMsg);
+      } else {
+        Alert.alert(feedbackTitle, feedbackMsg);
+      }
+    } catch (err) {
+      const msg = 'Gagal mendeteksi lokasi GPS. Silakan tentukan titik langsung pada peta.';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Informasi Lokasi', msg);
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
+  const handleSaveAddress = async () => {
+    if (!addressText.trim()) {
+      const msg = 'Alamat lengkap penjemputan tidak boleh kosong.';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Peringatan', msg);
+      return;
+    }
+
+    try {
+      setIsSavingAddress(true);
+      const res = await updateProfile({
+        address: addressText.trim(),
+        latitude: customerCoords.latitude,
+        longitude: customerCoords.longitude,
+      });
+
+      if (res.success) {
+        const msg = 'Alamat dan koordinat penjemputan berhasil disimpan ke akun Anda.';
+        if (Platform.OS === 'web') {
+          window.alert(msg);
+        } else {
+          Alert.alert('Sukses', msg);
+        }
+        setAddressModalVisible(false);
+      } else {
+        const msg = res.message || 'Gagal menyimpan alamat.';
+        if (Platform.OS === 'web') window.alert(msg);
+        else Alert.alert('Gagal', msg);
+      }
+    } catch (err) {
+      const msg = 'Terjadi kesalahan saat menyimpan alamat.';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Gagal', msg);
+    } finally {
+      setIsSavingAddress(false);
+    }
+  };
 
   const handleChooseAvatar = async () => {
     try {
@@ -86,13 +246,13 @@ const ProfileScreen = ({ navigation }) => {
   const menuItems = [
     {
       icon: 'location-outline',
-      title: 'Alamat Saya',
+      title: 'Alamat Penjemputan Saya',
       onPress: () => {
-        if (Platform.OS === 'web') {
-          window.alert(`Alamat Anda:\n${user?.address || 'Jl. Melati No. 12, Lowokwaru, Malang'}`);
-        } else {
-          Alert.alert('Alamat Saya', user?.address || 'Jl. Melati No. 12, Lowokwaru, Malang');
+        setAddressText(user?.address || 'Jl. Melati No. 12, Kebayoran Baru, Jakarta Selatan');
+        if (user?.latitude && user?.longitude) {
+          setCustomerCoords({ latitude: user.latitude, longitude: user.longitude });
         }
+        setAddressModalVisible(true);
       },
     },
     {
@@ -237,6 +397,166 @@ const ProfileScreen = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
+
+      {/* Modal Pengaturan Alamat Pelanggan */}
+      <Modal
+        visible={addressModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setAddressModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, isDesktop && styles.desktopModalBox]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={styles.modalTitle}>Pengaturan Alamat Penjemputan</Text>
+                <Text style={styles.modalSub}>
+                  Geser penanda biru pada peta atau gunakan GPS untuk menetapkan lokasi penjemputan Anda
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setAddressModalVisible(false)}
+              >
+                <Text style={styles.modalCloseBtnText}>Tutup</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
+              {/* Peta Interaktif Leaflet Penentuan Titik Pelanggan */}
+              <View style={styles.modalMapWrapper}>
+                <RouteMapView
+                  customerLocation={customerCoords}
+                  outletLocation={outletCoords}
+                  isDraggable={true}
+                  onLocationChange={handleLocationChange}
+                  showGeofence={true}
+                  geofenceRadiusMeters={geofenceRadius}
+                  height={240}
+                />
+              </View>
+
+              {/* Tombol Deteksi Lokasi GPS Pelanggan */}
+              <TouchableOpacity
+                style={styles.modalGpsBtn}
+                onPress={handleUseCurrentGps}
+                disabled={isLocating}
+                activeOpacity={0.8}
+              >
+                {isLocating ? (
+                  <ActivityIndicator size="small" color="#236B38" style={{ marginRight: 6 }} />
+                ) : null}
+                <Text style={styles.modalGpsBtnText}>
+                  {isLocating
+                    ? 'Mendeteksi Posisi Anda...'
+                    : 'Gunakan Posisi GPS Saat Ini'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Form Input Detail Alamat */}
+              <Text style={styles.modalFieldLabel}>Alamat Lengkap Penjemputan</Text>
+              <TextInput
+                style={[styles.modalTextInput, { minHeight: 70 }]}
+                value={addressText}
+                onChangeText={setAddressText}
+                multiline
+                placeholder="Contoh: Jl. Melati No. 12, RT 01/RW 02, Kebayoran Baru, Jakarta Selatan"
+                placeholderTextColor="#9CA3AF"
+              />
+
+              <View style={styles.modalCoordsRow}>
+                <View style={{ flex: 1, marginRight: 6 }}>
+                  <Text style={styles.modalFieldLabel}>Lintang (Latitude)</Text>
+                  <Text style={styles.coordsValueBox}>{customerCoords.latitude.toFixed(6)}</Text>
+                </View>
+                <View style={{ flex: 1, marginLeft: 6 }}>
+                  <Text style={styles.modalFieldLabel}>Bujur (Longitude)</Text>
+                  <Text style={styles.coordsValueBox}>{customerCoords.longitude.toFixed(6)}</Text>
+                </View>
+              </View>
+
+              {/* Status Jangkauan Layanan Geofence */}
+              <View
+                style={[
+                  styles.geofenceCard,
+                  geofenceStatus.isInside
+                    ? styles.geofenceCardInside
+                    : styles.geofenceCardOutside,
+                ]}
+              >
+                <View style={styles.geofenceHeader}>
+                  <Text
+                    style={[
+                      styles.geofenceTitle,
+                      geofenceStatus.isInside
+                        ? styles.geofenceTextInside
+                        : styles.geofenceTextOutside,
+                    ]}
+                  >
+                    {geofenceStatus.isInside
+                      ? 'STATUS JANGKAUAN: DALAM AREA LAYANAN'
+                      : 'STATUS JANGKAUAN: DILUAR AREA LAYANAN'}
+                  </Text>
+                  <View
+                    style={[
+                      styles.geofenceBadge,
+                      geofenceStatus.isInside
+                        ? styles.geofenceBadgeInside
+                        : styles.geofenceBadgeOutside,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.geofenceBadgeText,
+                        geofenceStatus.isInside
+                          ? styles.geofenceTextInside
+                          : styles.geofenceTextOutside,
+                      ]}
+                    >
+                      {geofenceStatus.isInside ? 'TERJANGKAU' : 'DILUAR RADIUS'}
+                    </Text>
+                  </View>
+                </View>
+                <Text
+                  style={[
+                    styles.geofenceDesc,
+                    geofenceStatus.isInside
+                      ? styles.geofenceTextInside
+                      : styles.geofenceTextOutside,
+                  ]}
+                >
+                  {geofenceStatus.message}
+                </Text>
+                <Text style={styles.geofenceDetail}>
+                  Jarak dari outlet: {geofenceStatus.distanceKm} km (Batas jangkauan toko: {Math.round(geofenceRadius / 1000)} km)
+                </Text>
+              </View>
+
+              {/* Action Buttons */}
+              <TouchableOpacity
+                style={styles.saveAddressBtn}
+                onPress={handleSaveAddress}
+                disabled={isSavingAddress}
+                activeOpacity={0.85}
+              >
+                {isSavingAddress ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.saveAddressBtnText}>Simpan Alamat Saya</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.cancelAddressBtn}
+                onPress={() => setAddressModalVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelAddressBtnText}>Batal</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -398,6 +718,198 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#DC2626',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    width: '100%',
+    maxHeight: '90%',
+    padding: 20,
+    overflow: 'hidden',
+  },
+  desktopModalBox: {
+    maxWidth: 620,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  modalSub: {
+    fontSize: 11,
+    color: '#64748B',
+    lineHeight: 16,
+  },
+  modalCloseBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+  },
+  modalCloseBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  modalScroll: {
+    paddingBottom: 20,
+  },
+  modalMapWrapper: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    marginBottom: 12,
+  },
+  modalGpsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 14,
+  },
+  modalGpsBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  modalFieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 5,
+    marginTop: 8,
+  },
+  modalTextInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: '#0F172A',
+    lineHeight: 18,
+  },
+  modalCoordsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  coordsValueBox: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  geofenceCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 14,
+  },
+  geofenceCardInside: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  geofenceCardOutside: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  geofenceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  geofenceTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  geofenceTextInside: {
+    color: '#065F46',
+  },
+  geofenceTextOutside: {
+    color: '#991B1B',
+  },
+  geofenceBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  geofenceBadgeInside: {
+    backgroundColor: '#D1FAE5',
+  },
+  geofenceBadgeOutside: {
+    backgroundColor: '#FEE2E2',
+  },
+  geofenceBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  geofenceDesc: {
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 16,
+    marginBottom: 2,
+  },
+  geofenceDetail: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  saveAddressBtn: {
+    backgroundColor: '#236B38',
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+  saveAddressBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  cancelAddressBtn: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  cancelAddressBtnText: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
 

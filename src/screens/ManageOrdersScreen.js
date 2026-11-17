@@ -53,6 +53,7 @@ const ManageOrdersScreen = ({ route, navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [activeOrder, setActiveOrder] = useState(null);
   const [updating, setUpdating] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
 
   // Handle route param changes
   useEffect(() => {
@@ -321,6 +322,70 @@ const ManageOrdersScreen = ({ route, navigation }) => {
           )}
         </View>
 
+        {/* Foto Dokumentasi Sepatu (Customer & Admin) */}
+        {(() => {
+          const beforePhoto =
+            item.shoePhoto ||
+            item.galleries?.find((g) => g.type === 'BEFORE' || g.type === 'SEBELUM')?.imageUrl ||
+            (item.galleries?.length === 1 && item.galleries?.[0]?.type !== 'SESUDAH' ? item.galleries?.[0]?.imageUrl : null);
+          const afterPhoto =
+            item.galleries?.find((g) => g.type === 'SESUDAH' || g.type === 'AFTER')?.imageUrl;
+          const hasProof = item.payment?.paymentProof;
+
+          if (!beforePhoto && !afterPhoto && !hasProof) return null;
+
+          return (
+            <View style={styles.orderPhotosBox}>
+              <Text style={styles.orderPhotosTitle}>Dokumentasi Foto:</Text>
+              <View style={styles.orderPhotosRow}>
+                {beforePhoto && (
+                  <TouchableOpacity
+                    style={styles.photoThumbContainer}
+                    onPress={() => setPreviewImage({ uri: beforePhoto, title: 'Foto Sepatu Customer (Sebelum Dicuci)' })}
+                    activeOpacity={0.8}
+                  >
+                    <Image source={{ uri: beforePhoto }} style={styles.photoThumbImg} />
+                    <View style={[styles.photoThumbTag, { backgroundColor: '#FEF3C7' }]}>
+                      <Text style={[styles.photoThumbTagText, { color: '#B45309' }]}>Customer</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+
+                {afterPhoto ? (
+                  <TouchableOpacity
+                    style={styles.photoThumbContainer}
+                    onPress={() => setPreviewImage({ uri: afterPhoto, title: 'Foto Hasil Akhir Laundry (Admin)' })}
+                    activeOpacity={0.8}
+                  >
+                    <Image source={{ uri: afterPhoto }} style={styles.photoThumbImg} />
+                    <View style={[styles.photoThumbTag, { backgroundColor: '#DCFCE7' }]}>
+                      <Text style={[styles.photoThumbTagText, { color: '#15803D' }]}>Hasil Admin</Text>
+                    </View>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.photoThumbEmpty}>
+                    <Ionicons name="camera-outline" size={16} color="#9CA3AF" />
+                    <Text style={styles.photoThumbEmptyText}>Hasil Belum Diupload</Text>
+                  </View>
+                )}
+
+                {hasProof && (
+                  <TouchableOpacity
+                    style={styles.photoThumbContainer}
+                    onPress={() => setPreviewImage({ uri: hasProof, title: 'Bukti Pembayaran Transfer' })}
+                    activeOpacity={0.8}
+                  >
+                    <Image source={{ uri: hasProof }} style={styles.photoThumbImg} />
+                    <View style={[styles.photoThumbTag, { backgroundColor: '#EFF6FF' }]}>
+                      <Text style={[styles.photoThumbTagText, { color: '#1D4ED8' }]}>Struk</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          );
+        })()}
+
         {/* Actions Row */}
         <View style={styles.actionsRow}>
           {isCancelled ? (
@@ -550,6 +615,27 @@ const ManageOrdersScreen = ({ route, navigation }) => {
                 );
               })}
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Preview Foto Ukuran Penuh */}
+      <Modal visible={!!previewImage} transparent animationType="fade">
+        <View style={styles.imageModalOverlay}>
+          <View style={styles.imageModalContent}>
+            <View style={styles.imageModalHeader}>
+              <Text style={styles.imageModalTitle}>{previewImage?.title || 'Pratinjau Foto'}</Text>
+              <TouchableOpacity onPress={() => setPreviewImage(null)} style={styles.imageModalCloseBtn}>
+                <Ionicons name="close" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            {previewImage?.uri && (
+              <Image
+                source={{ uri: previewImage.uri }}
+                style={styles.imageModalImg}
+                resizeMode="contain"
+              />
+            )}
           </View>
         </View>
       </Modal>
@@ -1057,6 +1143,111 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#6B7280',
     marginTop: 1,
+  },
+  orderPhotosBox: {
+    marginBottom: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  orderPhotosTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4B5563',
+    marginBottom: 8,
+  },
+  orderPhotosRow: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  photoThumbContainer: {
+    position: 'relative',
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  photoThumbImg: {
+    width: 68,
+    height: 68,
+    backgroundColor: '#F3F4F6',
+  },
+  photoThumbTag: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingVertical: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoThumbTagText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  photoThumbEmpty: {
+    width: 68,
+    height: 68,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+    backgroundColor: '#F9FAFB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 4,
+  },
+  photoThumbEmptyText: {
+    fontSize: 8,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  imageModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  imageModalContent: {
+    width: '100%',
+    maxWidth: 600,
+    maxHeight: '85%',
+    backgroundColor: '#1E293B',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  imageModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+  imageModalTitle: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    flex: 1,
+    marginRight: 10,
+  },
+  imageModalCloseBtn: {
+    padding: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  imageModalImg: {
+    width: '100%',
+    height: 380,
+    backgroundColor: '#0F172A',
   },
 });
 

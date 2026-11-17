@@ -1,8 +1,8 @@
 import axios from 'axios';
-import Storage from './storage';
-import { Platform, NativeModules } from 'react-native';
-import mockApi from './mockApi';
+import { NativeModules, Platform } from 'react-native';
 import parseApiError from './apiError';
+import mockApi from './mockApi';
+import Storage from './storage';
 
 /**
  * Atur ke true jika ingin selalu menggunakan Mock JSON tanpa menyalakan server backend.
@@ -118,6 +118,9 @@ const handleMockFallback = async (method: string, url: string, data?: any, param
   if (cleanPath === 'auth/logout' && method === 'POST') {
     return await mockApi.logout();
   }
+  if ((cleanPath === 'auth/profile' || cleanPath === 'users/profile') && (method === 'PUT' || method === 'POST' || method === 'PATCH')) {
+    return await mockApi.updateProfile(data);
+  }
 
   // 3. Orders
   if (cleanPath === 'orders/my-orders' && method === 'GET') {
@@ -169,6 +172,10 @@ const handleMockFallback = async (method: string, url: string, data?: any, param
     const id = cleanPath.split('/')[2];
     return await mockApi.updateOrderStatus(id, data?.status, data?.notes || data?.description);
   }
+  if (cleanPath.startsWith('admin/orders/') && cleanPath.endsWith('/gallery') && method === 'POST') {
+    const id = cleanPath.split('/')[2];
+    return await mockApi.addOrderGallery(id, data);
+  }
   if (cleanPath.startsWith('admin/orders/') && method === 'DELETE') {
     const id = cleanPath.split('/')[2];
     return await mockApi.deleteAdminOrder(id);
@@ -191,7 +198,7 @@ export const api = {
       try {
         const res = await handleMockFallback('GET', url, null, config?.params);
         if (url.includes('services') && res?.data) {
-          Storage.setItem('@cache_services', JSON.stringify(res.data)).catch(() => {});
+          Storage.setItem('@cache_services', JSON.stringify(res.data)).catch(() => { });
         }
         return res;
       } catch (err: any) {
@@ -207,7 +214,7 @@ export const api = {
     try {
       const res = await axiosInstance.get(url, config);
       if (url.includes('services') && res?.data) {
-        Storage.setItem('@cache_services', JSON.stringify(res.data)).catch(() => {});
+        Storage.setItem('@cache_services', JSON.stringify(res.data)).catch(() => { });
       }
       return res;
     } catch (error: any) {

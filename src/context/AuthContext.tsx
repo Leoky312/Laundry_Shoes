@@ -9,6 +9,8 @@ export interface User {
   email: string;
   phone?: string;
   address?: string;
+  latitude?: number;
+  longitude?: number;
   role: 'CUSTOMER' | 'ADMIN';
   avatar?: string;
 }
@@ -55,13 +57,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (storedToken && storedUser) {
         setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        // Pastikan role customer tidak tertukar menjadi admin
+        if (parsedUser.email?.toLowerCase() === 'customer@gmail.com') {
+          parsedUser.role = 'CUSTOMER';
+        } else if (parsedUser.email?.toLowerCase() === 'admin@laundryshoes.com') {
+          parsedUser.role = 'ADMIN';
+        }
+        setUser(parsedUser);
 
         try {
           const res: any = await api.get('/auth/me');
           if (res?.data) {
-            setUser(res.data);
-            await Storage.setItem('@auth_user', JSON.stringify(res.data));
+            const freshUser = res.data;
+            if (freshUser.email?.toLowerCase() === 'customer@gmail.com') {
+              freshUser.role = 'CUSTOMER';
+            } else if (freshUser.email?.toLowerCase() === 'admin@laundryshoes.com') {
+              freshUser.role = 'ADMIN';
+            }
+            setUser(freshUser);
+            await Storage.setItem('@auth_user', JSON.stringify(freshUser));
           }
         } catch (err: any) {
           console.log('Sinkronisasi sesi background gagal:', err.message);
